@@ -1,7 +1,5 @@
-// src/services/prmSummaryService.ts
 import { execute } from "../db";
 
-// PRM summary SQL - English comments only
 
 const SQL_TOTALS = `
   SELECT
@@ -27,7 +25,6 @@ const SQL_LAST_RUN = `
   FETCH FIRST 1 ROWS ONLY
 `;
 
-// Using ROWNUM keeps bind-variable limit compatible across Oracle versions
 const SQL_RECENT_FAILURES = `
   SELECT *
   FROM (
@@ -56,11 +53,6 @@ function toNumber(x: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/**
- * Extract a preview around the last FATAL line:
- * returns up to `linesBack` lines before the FATAL line (inclusive).
- * If no FATAL is found, returns the last `fallbackLines` lines.
- */
 function buildFailureTextPreview(
   text: unknown,
   linesBack = 25,
@@ -71,7 +63,6 @@ function buildFailureTextPreview(
   const lines = text.split(/\r?\n/);
   if (lines.length === 0) return null;
 
-  // Find the last line that contains "FATAL" (most relevant failure point)
   let fatalIndex = -1;
   for (let i = lines.length - 1; i >= 0; i--) {
     if (lines[i].includes("FATAL")) {
@@ -86,14 +77,12 @@ function buildFailureTextPreview(
     return previewLines.join("\n").trim() || null;
   }
 
-  // Fallback: last lines if no FATAL exists
   const start = Math.max(0, lines.length - fallbackLines);
   const previewLines = lines.slice(start);
   return previewLines.join("\n").trim() || null;
 }
 
 export async function getPrmSummary(daysBack: number, limit: number) {
-  // 1) Totals
   const totalsRes = await execute(SQL_TOTALS, { daysBack });
   const totalsRow: any = totalsRes.rows?.[0] ?? {};
 
@@ -102,11 +91,9 @@ export async function getPrmSummary(daysBack: number, limit: number) {
   const total = toNumber(totalsRow.TOTAL_COUNT);
   const passRate = total > 0 ? Math.round((passed / total) * 10000) / 100 : 0;
 
-  // 2) Last run
   const lastRes = await execute(SQL_LAST_RUN);
   const lastRow: any = lastRes.rows?.[0] ?? null;
 
-  // 3) Recent failures
   const failsRes = await execute(SQL_RECENT_FAILURES, { daysBack, limit });
   const recentFailures = (failsRes.rows ?? []).map((r: any) => ({
     testedOn: r.TESTEDON_IL ?? null,
@@ -117,10 +104,8 @@ export async function getPrmSummary(daysBack: number, limit: number) {
     logLink: r.LOGLINK ?? null,
     screenshotLink: r.SCREENSHOTLINK ?? null,
 
-    // Full text (keep for now; can remove later to reduce payload)
     failureText: r.FAILURETEXT ?? null,
 
-    // New: preview around the FATAL line
     failureTextPreview: buildFailureTextPreview(r.FAILURETEXT, 25, 20),
   }));
 

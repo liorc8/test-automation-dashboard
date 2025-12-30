@@ -1,14 +1,11 @@
 import { Request, Response } from "express";
 import { getPrmSummary } from "../services/prmSummaryService";
 
-// Controller - English comments only
 export const getPrmSummaryHandler = async (req: Request, res: Response) => {
   try {
-    // Parse query params with defaults
     const daysBackRaw = Number(req.query.daysBack ?? 7);
     const limitRaw = Number(req.query.limit ?? 10);
 
-    // Clamp values to keep DB safe and responses predictable
     const daysBack =
       Number.isFinite(daysBackRaw) ? Math.min(Math.max(daysBackRaw, 1), 90) : 7;
 

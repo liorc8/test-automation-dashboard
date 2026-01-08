@@ -1,9 +1,8 @@
 import { Router } from "express";
-import { getPrmSummaryHandler } from "../controllers/prmSummaryController";
+import { getAreaSummaryHandler } from "../controllers/areaSummaryController";
 
 const router = Router();
 
-// (PRM only for now)
-router.get("/PRM/summary", getPrmSummaryHandler);
+router.get("/:areaName/summary", getAreaSummaryHandler);
 
 export default router;

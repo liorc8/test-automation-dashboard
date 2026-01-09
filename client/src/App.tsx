@@ -1,19 +1,10 @@
-import { useEffect, useState } from "react";
+import React from 'react';
+import DashboardPage from './pages/DashboardPage';
 
 function App() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    fetch("http://localhost:3000/")
-      .then(res => res.json())
-      .then(data => setMessage(data.message))
-      .catch(err => console.error(err));
-  }, []);
-
   return (
-    <div style={{ textAlign: "center", paddingTop: "50px" }}>
-      <h1>Automation Dashboard Client ✅</h1>
-      <p>{message || "Connecting to server..."}</p>
+    <div className="App">
+      <DashboardPage />
     </div>
   );
 }

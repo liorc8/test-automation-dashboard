@@ -1,26 +1,29 @@
-
----
-
-# `docs/api-contract.md`
-
-
 # API Contract — Automation Dashboard
 
 This document defines the HTTP API contract between the React frontend and the Node.js backend.
 
-## Base URL
-- Local development: `http://localhost:5000/api`
+---
+
+## Base URLs
+
+- Health endpoint (not under `/api`): `http://localhost:5000/health`
+- API base (areas endpoints): `http://localhost:5000/api`
+
+---
 
 ## Conventions
+
 - All responses are JSON.
 - Date/time fields (e.g. `testedOn`) are returned as strings in the backend’s current format.
-- Errors are returned as JSON with an `error` field (recommended standard).
+- Area identifiers are case-sensitive in the API (examples use uppercase IDs such as `PRM`).
+- Errors use the JSON shape `{ "error": "<message>" }` when returned (see **Errors** section).
 
 ---
 
 ## Health
 
 ### GET `/health`
+
 Returns backend availability information.
 
 **Response — 200 OK**
@@ -90,7 +93,10 @@ Returns an aggregated summary for a specific area.
 
 **Query params**
 
-* `windowDays` (number, default: `1`) — number of days to look back.
+* `limit` (number, default: `10`) — number of failure items to return in `recentFailures`.
+* `daysBack` (number, default: `7`) — planned lookback window.
+
+  * **Current implementation note:** the backend currently summarizes the *latest run day* (based on `MAX(TRUNC(TESTEDON))`). `daysBack` is parsed but not applied in the SQL yet.
 
 **Response — 200 OK**
 
@@ -125,50 +131,95 @@ Returns an aggregated summary for a specific area.
 }
 ```
 
-### Response shape definitions
+---
 
-#### `totals`
+## Response shape definitions
 
-* `passed` (number) — count of passed tests in the selected window.
-* `failed` (number) — count of failed tests in the selected window.
-* `total` (number) — total tests in the selected window.
+### `totals`
+
+* `passed` (number) — count of passed tests in the selected summary scope.
+* `failed` (number) — count of failed tests in the selected summary scope.
+* `total` (number) — total tests in the selected summary scope.
 * `passRate` (number) — pass percentage (0–100).
 
-#### `lastRun`
+### `lastRun`
 
-* `testedOn` (string | null) — date/time of the last run in the selected window (format as returned by backend).
+* `testedOn` (string | null) — date/time of the last run day (format as returned by backend).
 * `buildNumber` (number | null)
 * `server` (string | null)
 * `almaVersion` (string | null)
 
-#### `recentFailures[]`
+### `recentFailures[]`
 
 Each item includes:
 
-* `testedOn` (string)
-* `testName` (string)
-* `server` (string)
-* `almaVersion` (string)
-* `buildNumber` (number)
+* `testedOn` (string | null)
+* `testName` (string | null)
+* `server` (string | null)
+* `almaVersion` (string | null)
+* `buildNumber` (number | null)
 * `logLink` (string | null)
 * `screenshotLink` (string | null)
-* `failureTextPreview` (string | null) — short failure preview (may contain escaped HTML).
+* `failureTextPreview` (string | null) — short failure preview (may include escaped HTML).
 
 ---
 
-## Errors (recommended standard)
+## Errors
+
+### Current behavior
+
+* Unknown `areaId` returns `200 OK` with an empty summary object:
+
+  * `totals` values are all `0`
+  * `lastRun` fields are `null`
+  * `recentFailures` is an empty array
+
+Example (unknown area):
+
+```json
+{
+  "area": "NOT_EXIST",
+  "windowDays": 1,
+  "totals": {
+    "passed": 0,
+    "failed": 0,
+    "total": 0,
+    "passRate": 0
+  },
+  "lastRun": {
+    "testedOn": null,
+    "buildNumber": null,
+    "server": null,
+    "almaVersion": null
+  },
+  "recentFailures": []
+}
+```
+
+### Recommended standard (planned)
 
 The backend should return errors in this format:
 
-**Response — 4xx/5xx**
-
 ```json
-{ "error": "Unknown areaId: NOT_EXIST" }
-
-{ "error": "limit must be a positive number" }
+{ "error": "Human readable message" }
 ```
 
 Examples:
 
-* `400 Bad Request` — unknown `areaId` or invalid `windowDays`
+* `404 Not Found` — unknown `areaId`
+
+```json
+{ "error": "Unknown areaId: NOT_EXIST" }
+```
+
+* `400 Bad Request` — invalid query params (e.g., negative or non-numeric `limit`)
+
+```json
+{ "error": "limit must be a positive number" }
+```
+
 * `500 Internal Server Error` — database connection or query failure
+
+```json
+{ "error": "Internal Server Error" }
+```

@@ -94,7 +94,7 @@ function buildFailureTextPreview(
 }
 
 export async function getAreaSummary(areaName: string, limit: number) {
-  const area = areaName;
+  const area = areaName.toUpperCase();
 
   const totalsRes = await execute(SQL_TOTALS, { area });
   const totalsRow: any = totalsRes.rows?.[0] ?? {};

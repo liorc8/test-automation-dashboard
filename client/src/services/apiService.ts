@@ -1,6 +1,7 @@
-import type { AreaSummaryResponse } from '../types/AreaSummary';
+import type { AreaSummaryResponse } from "../types/AreaSummary";
+import type { AreaItem } from "../types/Area";
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = "http://localhost:5000/api";
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -10,9 +11,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
-export const getAreaSummary = async (areaName: string, limit: number = 10): Promise<AreaSummaryResponse> => {
+export const getAreas = async (): Promise<AreaItem[]> => {
+  const response = await fetch(`${API_BASE_URL}/areas`);
+  return handleResponse<AreaItem[]>(response);
+};
+
+export const getAreaSummary = async (
+  areaName: string,
+  limit: number = 10
+): Promise<AreaSummaryResponse> => {
   const url = `${API_BASE_URL}/areas/${areaName}/summary?limit=${limit}`;
-  
   const response = await fetch(url);
   return handleResponse<AreaSummaryResponse>(response);
 };

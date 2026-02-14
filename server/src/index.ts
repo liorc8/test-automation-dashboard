@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import testResultsRoutes from "./routes/testResultsRoutes";
 import areasRoutes from "./routes/areasRoutes";
+import envsRoutes from "./routes/envsRoutes";
 import { checkConnection, closePool } from "./db";
 
 dotenv.config();
@@ -15,6 +16,7 @@ app.use(express.json());
 
 app.use("/api/test-results", testResultsRoutes);
 app.use("/api/areas", areasRoutes); 
+app.use("/api/envs", envsRoutes);
 
 app.get("/health", (req: Request, res: Response) => {
   res.json({ status: "OK", system: "Automation Dashboard Backend" });

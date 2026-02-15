@@ -1,6 +1,7 @@
 import type { AreaSummaryResponse } from "../types/AreaSummary";
 import type { AreaItem } from "../types/Area";
 import type { AreaHealthResponse, EnvHealthResponse } from "../types/Health";
+import type { AreasDashboardResponse } from "../types/Dashboard";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -43,3 +44,12 @@ export const getEnvHealth = async (
   const response = await fetch(url);
   return handleResponse<EnvHealthResponse>(response);
 };
+
+export const getAreasDashboard = async (
+  daysBack: number = 8
+): Promise<AreasDashboardResponse> => {
+  const url = `${API_BASE_URL}/areas/dashboard?daysBack=${daysBack}`;
+  const response = await fetch(url);
+  return handleResponse<AreasDashboardResponse>(response);
+};
+

@@ -65,7 +65,7 @@ const DashboardPage: React.FC = () => {
   }, []);
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3 }}>
+    <Container maxWidth={false} disableGutters sx={{ px: 3, py: 3 }}>
       <Box sx={{ mb: 2 }}>
         <Typography variant="h4" fontWeight="bold">
           Automation Status Overview
@@ -87,9 +87,9 @@ const DashboardPage: React.FC = () => {
       {!loading && error && <Alert severity="error">{error}</Alert>}
 
       {!loading && !error && (
-        <Grid container spacing={2}>
+        <Grid container spacing={3}>
           {cards.map((c) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={c.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }} key={c.id}>
               <AreaCard
                 areaName={c.id}
                 displayName={c.name}

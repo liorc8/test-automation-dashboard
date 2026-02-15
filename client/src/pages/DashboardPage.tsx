@@ -1,48 +1,86 @@
 import React, { useEffect, useState } from "react";
 import { Container, Typography, Box, Alert, CircularProgress } from "@mui/material";
-import { Grid } from "@mui/material";
+import Grid from "@mui/material/Grid";
 
 import AreaCard from "../components/AreaCard";
-import { getAreas } from "../services/apiService";
+import { getAreas, getAreasDashboard } from "../services/apiService";
 import type { AreaItem } from "../types/Area";
+import type { AreasDashboardResponse } from "../types/Dashboard";
+
+type AreaCardVM = {
+  id: string;
+  name: string;
+  lastRunDay: string | null;
+  passRate: number;
+  total: number;
+  passed: number;
+  failed: number;
+};
 
 const DashboardPage: React.FC = () => {
-  const [areas, setAreas] = useState<AreaItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
+  const [cards, setCards] = useState<AreaCardVM[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadAreas = async () => {
+    const load = async () => {
       try {
         setLoading(true);
         setError("");
-        const data = await getAreas();
-        setAreas(data);
+
+        const [areas, dashboard]: [AreaItem[], AreasDashboardResponse] = await Promise.all([
+          getAreas(),
+          getAreasDashboard(8),
+        ]);
+
+        const byArea = new Map<string, AreasDashboardResponse["items"][number]>();
+        for (const item of dashboard.items) {
+          byArea.set(item.area.toUpperCase(), item);
+        }
+
+        const vm: AreaCardVM[] = areas.map((a) => {
+          const item = byArea.get(a.id.toUpperCase());
+          const w = item?.window;
+
+          return {
+            id: a.id,
+            name: a.name,
+            lastRunDay: item?.lastRunDay ?? null,
+            passRate: w?.passRate ?? 0,
+            total: w?.total ?? 0,
+            passed: w?.passed ?? 0,
+            failed: w?.failed ?? 0,
+          };
+        });
+
+        setCards(vm);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load areas");
+        setError(e instanceof Error ? e.message : "Failed to load dashboard");
       } finally {
         setLoading(false);
       }
     };
 
-    loadAreas();
+    load();
   }, []);
 
   return (
-    <Container maxWidth="xl" sx={{ marginTop: 4, marginBottom: 4 }}>
-      {/* Page header */}
-      <Box sx={{ marginBottom: 4, borderBottom: "1px solid #eee", pb: 2 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: "bold", color: "#2c3e50" }}>
+    <Container maxWidth={false} disableGutters sx={{ px: 3, py: 3 }}>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h4" fontWeight="bold">
           Automation Status Overview
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
+        <Typography variant="body2" color="text.secondary">
           Real-time status of all Alma testing areas
         </Typography>
       </Box>
 
       {loading && (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
-          <CircularProgress />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <CircularProgress size={20} />
+          <Typography variant="body2" color="text.secondary">
+            Loading...
+          </Typography>
         </Box>
       )}
 
@@ -50,9 +88,17 @@ const DashboardPage: React.FC = () => {
 
       {!loading && !error && (
         <Grid container spacing={3}>
-          {areas.map((area) => (
-            <Grid key={area.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-              <AreaCard areaName={area.id} displayName={area.name} />
+          {cards.map((c) => (
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }} key={c.id}>
+              <AreaCard
+                areaName={c.id}
+                displayName={c.name}
+                passRate={c.passRate}
+                total={c.total}
+                passed={c.passed}
+                failed={c.failed}
+                lastRunDay={c.lastRunDay}
+              />
             </Grid>
           ))}
         </Grid>

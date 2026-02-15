@@ -1,18 +1,20 @@
 import { execute } from "../db";
 const SQL_TOTALS = `
-  WITH LastRunDate AS (
-    SELECT MAX(TRUNC(TESTEDON)) as LAST_DATE
-    FROM QA_AUTOMATION.TESTRESULTS
-    WHERE UPPER(AREA) = :area
-  )
-  SELECT
-    SUM(CASE WHEN LOWER(PASSED) = 'true' THEN 1 ELSE 0 END) AS PASSED_COUNT,
-    SUM(CASE WHEN LOWER(PASSED) = 'false' AND FAILURETEXT NOT LIKE '%@BeforeMethod%' THEN 1 ELSE 0 END) AS FAILED_COUNT,
-    COUNT(*) AS TOTAL_COUNT,
-    TO_CHAR(MAX(LAST_DATE), 'DD/MM/YYYY') AS RUN_DATE
-  FROM QA_AUTOMATION.TESTRESULTS, LastRunDate
+WITH LastRunDate AS (
+  SELECT MAX(TRUNC(TESTEDON)) AS LAST_DATE
+  FROM QA_AUTOMATION.TESTRESULTS
   WHERE UPPER(AREA) = :area
-    AND TRUNC(TESTEDON) = LastRunDate.LAST_DATE
+)
+SELECT
+  SUM(CASE WHEN LOWER(t.PASSED) = 'true' THEN 1 ELSE 0 END) AS PASSED_COUNT,
+  SUM(CASE WHEN LOWER(t.PASSED) = 'false' AND NVL(t.FAILURETEXT,'') NOT LIKE '%@BeforeMethod%' THEN 1 ELSE 0 END) AS FAILED_COUNT,
+  SUM(CASE WHEN LOWER(t.PASSED) = 'false' AND NVL(t.FAILURETEXT,'') LIKE '%@BeforeMethod%' THEN 1 ELSE 0 END) AS SKIPPED_COUNT,
+  TO_CHAR(d.LAST_DATE, 'DD/MM/YYYY') AS RUN_DATE
+FROM QA_AUTOMATION.TESTRESULTS t
+CROSS JOIN LastRunDate d
+WHERE UPPER(t.AREA) = :area
+  AND TRUNC(t.TESTEDON) = d.LAST_DATE
+GROUP BY d.LAST_DATE
 `;
 
 const SQL_LAST_RUN_INFO = `
@@ -101,8 +103,10 @@ export async function getAreaSummary(areaName: string, limit: number) {
 
   const passed = toNumber(totalsRow.PASSED_COUNT);
   const failed = toNumber(totalsRow.FAILED_COUNT);
-  const total = toNumber(totalsRow.TOTAL_COUNT);
+  const skipped = toNumber(totalsRow.SKIPPED_COUNT);
+  const total = passed + failed;
   const passRate = total > 0 ? Math.round((passed / total) * 10000) / 100 : 0;
+
 
   const lastRes = await execute(SQL_LAST_RUN_INFO, { area });
   const lastRow: any = lastRes.rows?.[0] ?? null;

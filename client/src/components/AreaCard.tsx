@@ -1,10 +1,10 @@
 import React from 'react';
-import { Card, CardContent, Typography, Box, Chip } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, Typography, Box, Chip, Button } from '@mui/material';
 
 interface AreaCardProps {
   areaName: string;
   displayName: string;
-
   passRate: number;
   total: number;
   passed: number;
@@ -21,9 +21,16 @@ const AreaCard: React.FC<AreaCardProps> = ({
   failed,
   lastRunDay,
 }) => {
+  const navigate = useNavigate();
+
   let statusColor = '#d32f2f';
   if (passRate > 80) statusColor = '#2e7d32';
   else if (passRate > 50) statusColor = '#ed6c02';
+
+  const handleViewFailures = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/failures/${areaName}`);
+  };
 
   return (
     <Card
@@ -56,7 +63,7 @@ const AreaCard: React.FC<AreaCardProps> = ({
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
           <Chip
             label={`${passed} Passed`}
             size="small"
@@ -68,6 +75,24 @@ const AreaCard: React.FC<AreaCardProps> = ({
             sx={{ bgcolor: '#ffebee', color: '#c62828', fontSize: '0.7rem' }}
           />
         </Box>
+
+        {failed > 0 && (
+          <Button
+            size="small"
+            variant="text"
+            onClick={handleViewFailures}
+            sx={{
+              color: '#c62828',
+              fontSize: '0.72rem',
+              textTransform: 'none',
+              p: 0,
+              minWidth: 0,
+              '&:hover': { textDecoration: 'underline', bgcolor: 'transparent' },
+            }}
+          >
+            ⚠️ נפילות אחרונות
+          </Button>
+        )}
 
         <Typography
           variant="caption"

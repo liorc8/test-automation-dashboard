@@ -56,9 +56,10 @@ export const getAreasDashboard = async (
 
 export const getAreaRecentFailuresGrouped = async (
   areaName: string,
-  windowDays: number = 10
+  windowDays: number = 10,
+  limit: number = 200
 ): Promise<AreaRecentFailuresGroupedResponse> => {
-  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/recent-failures-grouped?windowDays=${windowDays}`;
+  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/recent-failures-grouped?windowDays=${windowDays}&limit=${limit}`;
   const response = await fetch(url);
   return handleResponse<AreaRecentFailuresGroupedResponse>(response);
 };

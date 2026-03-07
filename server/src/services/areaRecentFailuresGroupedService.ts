@@ -13,10 +13,12 @@ WITH failures AS (
     LOGLINK,
     SCREENSHOTLINK,
     FAILURETEXT,
+    -- REASON_KEY: used for grouping similar failures together.
+    -- We take the full FAILURETEXT (up to 4000 chars) so we can display it in full on the frontend.
+    -- Newlines are kept as-is so the terminal box renders them correctly.
     CASE
       WHEN FAILURETEXT IS NULL THEN NULL
-      WHEN INSTR(FAILURETEXT, 'FATAL') > 0 THEN REGEXP_SUBSTR(FAILURETEXT, 'FATAL[^\\r\\n]*')
-      ELSE SUBSTR(REPLACE(REPLACE(FAILURETEXT, CHR(13), ' '), CHR(10), ' '), 1, 200)
+      ELSE SUBSTR(FAILURETEXT, 1, 4000)
     END AS REASON_KEY
   FROM QA_AUTOMATION.TESTRESULTS
   WHERE UPPER(AREA) = :area
@@ -28,7 +30,7 @@ test_stats AS (
   SELECT
     TESTNAME,
     COUNT(*) AS FAIL_COUNT,
-    MAX(TESTEDON) AS LAST_FAILED_ON
+    MAX(ENDINGTIMEUNIX) AS LAST_ENDING_UNIX
   FROM failures
   GROUP BY TESTNAME
 ),
@@ -37,10 +39,10 @@ reason_counts AS (
     TESTNAME,
     REASON_KEY,
     COUNT(*) AS CNT,
-    MAX(TESTEDON) AS LAST_SEEN,
+    MAX(ENDINGTIMEUNIX) AS LAST_SEEN_UNIX,
     ROW_NUMBER() OVER (
       PARTITION BY TESTNAME
-      ORDER BY COUNT(*) DESC, MAX(TESTEDON) DESC
+      ORDER BY COUNT(*) DESC, MAX(ENDINGTIMEUNIX) DESC
     ) AS RN
   FROM failures
   WHERE REASON_KEY IS NOT NULL
@@ -75,7 +77,9 @@ FROM (
   SELECT
     s.TESTNAME,
     s.FAIL_COUNT,
-    TO_CHAR(s.LAST_FAILED_ON, 'DD/MM/YYYY HH24:MI') AS LAST_FAILED_ON_IL,
+    -- Return the raw unix ms value – date formatting is handled in Node.js
+    -- to avoid Oracle timezone/arithmetic issues with large numbers.
+    s.LAST_ENDING_UNIX AS LAST_ENDING_UNIX,
     tr.REASON1,
     tr.REASON2,
     tr.REASON3,
@@ -88,10 +92,23 @@ FROM (
   FROM test_stats s
   LEFT JOIN top_reasons tr ON tr.TESTNAME = s.TESTNAME
   LEFT JOIN last_failure lf ON lf.TESTNAME = s.TESTNAME
-  ORDER BY s.FAIL_COUNT DESC, s.LAST_FAILED_ON DESC
+  ORDER BY s.FAIL_COUNT DESC, s.LAST_ENDING_UNIX DESC NULLS LAST
 )
 WHERE ROWNUM <= :limit
 `;
+
+// Converts a unix timestamp in milliseconds to DD/MM/YYYY HH:MM (local server time)
+function formatUnixMs(x: unknown): string | null {
+  const n = typeof x === "number" ? x : Number(x);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const d = new Date(n);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
 
 function toNumber(x: unknown): number | null {
   if (typeof x === "number") return x;
@@ -113,7 +130,7 @@ export async function getAreaRecentFailuresGrouped(areaName: string, daysBack: n
     return {
       testName: String(r.TESTNAME),
       failCount: Number(r.FAIL_COUNT ?? 0),
-      lastFailedOn: (r.LAST_FAILED_ON_IL ?? null) as string | null,
+      lastFailedOn: formatUnixMs(r.LAST_ENDING_UNIX),
       reasons,
       lastFailure: {
         server: (r.SERVER ?? null) as string | null,

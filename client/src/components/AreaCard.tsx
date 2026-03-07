@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { EnvFilter } from '../services/apiService';
 import { Card, CardContent, Typography, Box, Chip, Button } from '@mui/material';
 
 interface AreaCardProps {
@@ -10,6 +11,7 @@ interface AreaCardProps {
   passed: number;
   failed: number;
   lastRunDay?: string | null;
+  env?: EnvFilter;
 }
 
 const AreaCard: React.FC<AreaCardProps> = ({
@@ -20,6 +22,7 @@ const AreaCard: React.FC<AreaCardProps> = ({
   passed,
   failed,
   lastRunDay,
+  env = "qa",
 }) => {
   const navigate = useNavigate();
 
@@ -27,9 +30,10 @@ const AreaCard: React.FC<AreaCardProps> = ({
   if (passRate > 80) statusColor = '#2e7d32';
   else if (passRate > 50) statusColor = '#ed6c02';
 
+
   const handleViewFailures = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/failures/${areaName}`);
+    navigate(`/failures/${areaName}?env=${env}`);
   };
 
   return (
@@ -90,7 +94,7 @@ const AreaCard: React.FC<AreaCardProps> = ({
               '&:hover': { textDecoration: 'underline', bgcolor: 'transparent' },
             }}
           >
-            ⚠️ נפילות אחרונות
+            ⚠️ Recent Failures
           </Button>
         )}
 

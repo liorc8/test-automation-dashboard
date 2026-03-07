@@ -3,6 +3,7 @@ import { Container, Typography, Box, Alert, CircularProgress } from "@mui/materi
 import Grid from "@mui/material/Grid";
 
 import AreaCard from "../components/AreaCard";
+import EnvToggle from "../components/EnvToggle";
 import { getAreas, getAreasDashboard, type EnvFilter } from "../services/apiService";
 import type { AreaItem } from "../types/Area";
 import type { AreasDashboardResponse } from "../types/Dashboard";
@@ -38,7 +39,7 @@ const DashboardPage: React.FC = () => {
 
         const [areas, dashboard]: [AreaItem[], AreasDashboardResponse] = await Promise.all([
           getAreas(),
-          getAreasDashboard(8, env), // pass env to API
+          getAreasDashboard(8, env),
         ]);
 
         const byArea = new Map<string, AreasDashboardResponse["items"][number]>();
@@ -70,7 +71,7 @@ const DashboardPage: React.FC = () => {
     };
 
     load();
-  }, [env]); // re-fetch whenever env changes
+  }, [env]);
 
   return (
     <Container maxWidth={false} disableGutters sx={{ px: 3, py: 3 }}>
@@ -85,42 +86,7 @@ const DashboardPage: React.FC = () => {
             Real-time status of all Alma testing areas
           </Typography>
         </Box>
-
-        {/* QA / Release toggle */}
-        <Box sx={{
-          display: "flex",
-          background: "#f1f5f9",
-          borderRadius: 2,
-          p: "3px",
-          gap: "2px",
-          alignSelf: "center",
-        }}>
-          {(["qa", "release", "sandbox"] as EnvFilter[]).map((e) => (
-            <Box
-              key={e}
-              component="button"
-              onClick={() => handleEnvChange(e)}
-              sx={{
-                px: 2.5, py: 0.8,
-                borderRadius: 1.5,
-                border: "none",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                transition: "all 0.15s",
-                background: env === e ? "#fff" : "transparent",
-                color: env === e
-                  ? (e === "qa" ? "#2563eb" : "#7c3aed")
-                  : "#94a3b8",
-                boxShadow: env === e ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-              }}
-            >
-              {e === "qa" ? "QA" : e === "release" ? "Release" : "Sandbox"}
-            </Box>
-          ))}
-        </Box>
+        <EnvToggle value={env} onChange={handleEnvChange} />
       </Box>
 
       {loading && (

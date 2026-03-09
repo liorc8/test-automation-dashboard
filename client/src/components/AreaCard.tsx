@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { EnvFilter } from '../services/apiService';
+import type { HealthBuckets } from '../types/Dashboard';
 import { Card, CardContent, Typography, Box, Chip, Button } from '@mui/material';
 
 interface AreaCardProps {
@@ -12,6 +13,7 @@ interface AreaCardProps {
   failed: number;
   lastRunDay?: string | null;
   env?: EnvFilter;
+  health?: HealthBuckets;
 }
 
 const AreaCard: React.FC<AreaCardProps> = ({
@@ -23,6 +25,7 @@ const AreaCard: React.FC<AreaCardProps> = ({
   failed,
   lastRunDay,
   env = "qa",
+  health,
 }) => {
   const navigate = useNavigate();
 
@@ -79,6 +82,27 @@ const AreaCard: React.FC<AreaCardProps> = ({
             sx={{ bgcolor: '#ffebee', color: '#c62828', fontSize: '0.7rem' }}
           />
         </Box>
+
+        {health && (
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5, mb: 1.5, fontSize: '0.72rem' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#2e7d32', flexShrink: 0 }} />
+              <Typography variant="caption" color="text.secondary">Healthy: {health.healthy}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ed6c02', flexShrink: 0 }} />
+              <Typography variant="caption" color="text.secondary">Medium: {health.medium}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#c62828', flexShrink: 0 }} />
+              <Typography variant="caption" color="text.secondary">Bad: {health.bad}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#757575', flexShrink: 0 }} />
+              <Typography variant="caption" color="text.secondary">Dead: {health.dead}</Typography>
+            </Box>
+          </Box>
+        )}
 
         {failed > 0 && (
           <Button

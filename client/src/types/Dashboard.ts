@@ -1,3 +1,10 @@
+export type HealthBuckets = {
+  healthy: number;
+  medium:  number;
+  bad:     number;
+  dead:    number;
+};
+
 export type DashboardTotals = {
   passed: number;
   failed: number;
@@ -9,7 +16,7 @@ export type DashboardAreaItem = {
   area: string;
   lastRunDay: string | null;
   last: DashboardTotals;
-  window: DashboardTotals & { daysBack: number };
+  health: HealthBuckets;
 };
 
 export type AreasDashboardResponse = {

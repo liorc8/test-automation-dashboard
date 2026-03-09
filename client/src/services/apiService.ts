@@ -57,6 +57,34 @@ export const getAreasDashboard = async (
   return handleResponse<AreasDashboardResponse>(response);
 };
 
+export type HealthBucket = "healthy" | "medium" | "bad" | "dead";
+
+export type HealthTestItem = {
+  testName: string;
+  passRate: number;
+  successes: number;
+  fails: number;
+  lastRunDate: string;
+  lastPassed: boolean;
+};
+
+export type AreaHealthTestsResponse = {
+  areaName: string;
+  bucket: HealthBucket;
+  env: EnvFilter;
+  tests: HealthTestItem[];
+};
+
+export const getAreaHealthTests = async (
+  areaName: string,
+  bucket: HealthBucket,
+  env: EnvFilter = "qa"
+): Promise<AreaHealthTestsResponse> => {
+  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/health-tests?bucket=${bucket}&env=${env}`;
+  const response = await fetch(url);
+  return handleResponse<AreaHealthTestsResponse>(response);
+};
+
 export const getAreaRecentFailuresGrouped = async (
   areaName: string,
   windowDays: number = 10,

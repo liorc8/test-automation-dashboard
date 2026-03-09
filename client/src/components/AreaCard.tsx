@@ -84,23 +84,33 @@ const AreaCard: React.FC<AreaCardProps> = ({
         </Box>
 
         {health && (
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5, mb: 1.5, fontSize: '0.72rem' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#2e7d32', flexShrink: 0 }} />
-              <Typography variant="caption" color="text.secondary">Healthy: {health.healthy}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ed6c02', flexShrink: 0 }} />
-              <Typography variant="caption" color="text.secondary">Medium: {health.medium}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#c62828', flexShrink: 0 }} />
-              <Typography variant="caption" color="text.secondary">Bad: {health.bad}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#757575', flexShrink: 0 }} />
-              <Typography variant="caption" color="text.secondary">Dead: {health.dead}</Typography>
-            </Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5, mb: 1.5 }}>
+            {([
+              { bucket: 'healthy', color: '#2e7d32', count: health.healthy },
+              { bucket: 'medium',  color: '#ed6c02', count: health.medium  },
+              { bucket: 'bad',     color: '#c62828', count: health.bad     },
+              { bucket: 'dead',    color: '#757575', count: health.dead    },
+            ] as const).map(({ bucket, color, count }) => (
+              <Box
+                key={bucket}
+                onClick={(e) => { e.stopPropagation(); navigate(`/health/${areaName}/${bucket}?env=${env}`); }}
+                sx={{
+                  display: 'flex', alignItems: 'center', gap: 0.5,
+                  cursor: 'pointer',
+                  '&:hover .bucket-label': { textDecoration: 'underline', color },
+                }}
+              >
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+                <Typography
+                  className="bucket-label"
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ transition: 'color 0.15s' }}
+                >
+                  {bucket.charAt(0).toUpperCase() + bucket.slice(1)}: {count}
+                </Typography>
+              </Box>
+            ))}
           </Box>
         )}
 

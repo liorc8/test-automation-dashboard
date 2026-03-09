@@ -2,7 +2,7 @@ export type EnvFilter = "qa" | "release" | "sandbox";
 
 const QA_SERVERS = ["QAC01", "QAC02", "SQA03_NA03", "SQA_NA01", "SQA_EU01"];
 
-const SANDBOX_SERVERS: string[] = [];
+const SANDBOX_SERVERS: string[] = ["SQA02_NA03"];
 
 export function buildServerFilter(env: EnvFilter): string {
   if (env === "qa") {

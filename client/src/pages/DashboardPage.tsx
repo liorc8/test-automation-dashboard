@@ -3,7 +3,8 @@ import { Container, Typography, Box, Alert, CircularProgress } from "@mui/materi
 import Grid from "@mui/material/Grid";
 
 import AreaCard from "../components/AreaCard";
-import { getAreas, getAreasDashboard } from "../services/apiService";
+import EnvToggle from "../components/EnvToggle";
+import { getAreas, getAreasDashboard, type EnvFilter } from "../services/apiService";
 import type { AreaItem } from "../types/Area";
 import type { AreasDashboardResponse } from "../types/Dashboard";
 
@@ -21,6 +22,14 @@ const DashboardPage: React.FC = () => {
   const [cards, setCards] = useState<AreaCardVM[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [env, setEnv] = useState<EnvFilter>(
+    () => (localStorage.getItem("selectedEnv") as EnvFilter) ?? "qa"
+  );
+
+  const handleEnvChange = (e: EnvFilter) => {
+    setEnv(e);
+    localStorage.setItem("selectedEnv", e);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -30,7 +39,7 @@ const DashboardPage: React.FC = () => {
 
         const [areas, dashboard]: [AreaItem[], AreasDashboardResponse] = await Promise.all([
           getAreas(),
-          getAreasDashboard(8),
+          getAreasDashboard(8, env),
         ]);
 
         const byArea = new Map<string, AreasDashboardResponse["items"][number]>();
@@ -62,17 +71,22 @@ const DashboardPage: React.FC = () => {
     };
 
     load();
-  }, []);
+  }, [env]);
 
   return (
     <Container maxWidth={false} disableGutters sx={{ px: 3, py: 3 }}>
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h4" fontWeight="bold">
-          Automation Status Overview
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Real-time status of all Alma testing areas
-        </Typography>
+
+      {/* Header row: title + QA/Release toggle */}
+      <Box sx={{ mb: 3, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+        <Box>
+          <Typography variant="h4" fontWeight="bold">
+            Automation Status Overview
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Real-time status of all Alma testing areas
+          </Typography>
+        </Box>
+        <EnvToggle value={env} onChange={handleEnvChange} />
       </Box>
 
       {loading && (
@@ -98,6 +112,7 @@ const DashboardPage: React.FC = () => {
                 passed={c.passed}
                 failed={c.failed}
                 lastRunDay={c.lastRunDay}
+                env={env}
               />
             </Grid>
           ))}

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { AREAS } from "../config/areas";
-import { getAreaRecentFailuresGrouped } from "../services/areaRecentFailuresGroupedService";
+import { getAreaRecentFailuresGrouped, EnvFilter } from "../services/areaRecentFailuresGroupedService";
 
 export const getAreaRecentFailuresGroupedHandler = async (req: Request, res: Response) => {
     try {
@@ -11,7 +11,6 @@ export const getAreaRecentFailuresGroupedHandler = async (req: Request, res: Res
 
         const daysBackRaw = (req.query.windowDays ?? req.query.daysBack) as string | undefined;
         const daysBack = daysBackRaw ? Number(daysBackRaw) : 7;
-
         if (!Number.isFinite(daysBack) || daysBack <= 0) {
             return res.status(400).json({ error: "daysBack must be a positive number" });
         }
@@ -22,10 +21,13 @@ export const getAreaRecentFailuresGroupedHandler = async (req: Request, res: Res
             return res.status(400).json({ error: "limit must be a positive number" });
         }
 
+        const envRaw = (req.query.env as string | undefined)?.toLowerCase();
+        const env: EnvFilter = envRaw === "release" ? "release" : envRaw === "sandbox" ? "sandbox" : "qa";
+
         const safeDaysBack = Math.min(Math.floor(daysBack), 90);
         const safeLimit = Math.min(Math.floor(limit), 500);
 
-        const data = await getAreaRecentFailuresGrouped(areaName, safeDaysBack, safeLimit);
+        const data = await getAreaRecentFailuresGrouped(areaName, safeDaysBack, safeLimit, env);
         return res.json(data);
     } catch (error) {
         console.error("Error fetching grouped recent failures:", error);

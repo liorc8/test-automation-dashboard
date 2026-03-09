@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { getAreasDashboard } from "../services/dashboardService";
+import { EnvFilter } from "../services/envFilter";
 
 export const getAreasDashboardHandler = async (req: Request, res: Response) => {
   try {
@@ -12,7 +13,10 @@ export const getAreasDashboardHandler = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "daysBack must be a positive number" });
     }
 
-    const data = await getAreasDashboard(Math.floor(daysBackValue));
+    const envRaw = (req.query.env as string | undefined)?.toLowerCase();
+    const env: EnvFilter = envRaw === "release" ? "release" : envRaw === "sandbox" ? "sandbox" : "qa";
+
+    const data = await getAreasDashboard(Math.floor(daysBackValue), env);
     return res.json(data);
   } catch (error) {
     console.error("Error fetching dashboard:", error);

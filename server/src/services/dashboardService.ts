@@ -1,5 +1,6 @@
 import { execute } from "../db";
 import { AREAS } from "../config/areas";
+import { EnvFilter, buildServerFilter } from "./envFilter";
 
 function toNumber(x: unknown): number {
   if (typeof x === "number") return x;
@@ -7,13 +8,16 @@ function toNumber(x: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-const SQL_AREAS_DASHBOARD = `
+function buildSQL(serverFilter: string): string {
+  return `
 WITH params AS (
   SELECT :daysBack AS DAYS_BACK FROM dual
 ),
 last_day AS (
   SELECT UPPER(AREA) AS AREA, MAX(TRUNC(TESTEDON)) AS LAST_DATE
   FROM QA_AUTOMATION.TESTRESULTS
+  WHERE 1=1
+    ${serverFilter}
   GROUP BY UPPER(AREA)
 ),
 last_agg AS (
@@ -24,6 +28,8 @@ last_agg AS (
   FROM QA_AUTOMATION.TESTRESULTS t
   JOIN last_day d
     ON UPPER(t.AREA)=d.AREA AND TRUNC(t.TESTEDON)=d.LAST_DATE
+  WHERE 1=1
+    ${serverFilter}
   GROUP BY UPPER(t.AREA)
 ),
 win_agg AS (
@@ -34,6 +40,7 @@ win_agg AS (
   FROM QA_AUTOMATION.TESTRESULTS t
   CROSS JOIN params p
   WHERE TRUNC(t.TESTEDON) >= TRUNC(SYSDATE) - p.DAYS_BACK + 1
+    ${serverFilter}
   GROUP BY UPPER(t.AREA)
 )
 SELECT
@@ -51,9 +58,13 @@ JOIN (
 ) a ON a.AREA = d.AREA
 ORDER BY a.AREA
 `;
+}
 
-export async function getAreasDashboard(daysBack: number) {
-  const res = await execute(SQL_AREAS_DASHBOARD, { daysBack });
+export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa") {
+  const serverFilter = buildServerFilter(env);
+  const sql = buildSQL(serverFilter);
+
+  const res = await execute(sql, { daysBack });
   const rows = res.rows ?? [];
 
   const byArea = new Map<string, any>();
@@ -90,5 +101,5 @@ export async function getAreasDashboard(daysBack: number) {
     );
   });
 
-  return { daysBack, items };
+  return { daysBack, env, items };
 }

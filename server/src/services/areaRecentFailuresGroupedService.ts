@@ -1,7 +1,11 @@
 import { execute } from "../db";
 import { cleanReason } from "../utils/failureText";
+import { EnvFilter, buildServerFilter } from "./envFilter";
 
-const SQL_AREA_RECENT_FAILURES_GROUPED = `
+export type { EnvFilter };
+
+function buildSQL(serverFilter: string): string {
+  return `
 WITH failures AS (
   SELECT
     TESTNAME,
@@ -13,9 +17,7 @@ WITH failures AS (
     LOGLINK,
     SCREENSHOTLINK,
     FAILURETEXT,
-    -- REASON_KEY: used for grouping similar failures together.
-    -- We take the full FAILURETEXT (up to 4000 chars) so we can display it in full on the frontend.
-    -- Newlines are kept as-is so the terminal box renders them correctly.
+    -- REASON_KEY: full failure text (up to 4000 chars) used for grouping.
     CASE
       WHEN FAILURETEXT IS NULL THEN NULL
       ELSE SUBSTR(FAILURETEXT, 1, 4000)
@@ -25,6 +27,7 @@ WITH failures AS (
     AND LOWER(PASSED) = 'false'
     AND NVL(FAILURETEXT, '') NOT LIKE '%@BeforeMethod%'
     AND TRUNC(TESTEDON) >= TRUNC(SYSDATE) - :daysBack + 1
+    ${serverFilter}
 ),
 test_stats AS (
   SELECT
@@ -77,8 +80,7 @@ FROM (
   SELECT
     s.TESTNAME,
     s.FAIL_COUNT,
-    -- Return the raw unix ms value – date formatting is handled in Node.js
-    -- to avoid Oracle timezone/arithmetic issues with large numbers.
+    -- Raw unix ms – date formatting is done in Node.js to avoid Oracle timezone issues.
     s.LAST_ENDING_UNIX AS LAST_ENDING_UNIX,
     tr.REASON1,
     tr.REASON2,
@@ -96,6 +98,7 @@ FROM (
 )
 WHERE ROWNUM <= :limit
 `;
+}
 
 // Converts a unix timestamp in milliseconds to DD/MM/YYYY HH:MM (local server time)
 function formatUnixMs(x: unknown): string | null {
@@ -116,10 +119,17 @@ function toNumber(x: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export async function getAreaRecentFailuresGrouped(areaName: string, daysBack: number, limit: number) {
+export async function getAreaRecentFailuresGrouped(
+  areaName: string,
+  daysBack: number,
+  limit: number,
+  env: EnvFilter = "qa"
+) {
   const area = areaName.toUpperCase();
+  const serverFilter = buildServerFilter(env);
+  const sql = buildSQL(serverFilter);
 
-  const res = await execute(SQL_AREA_RECENT_FAILURES_GROUPED, { area, daysBack, limit });
+  const res = await execute(sql, { area, daysBack, limit });
   const rows = (res.rows ?? []) as any[];
 
   const items = rows.map((r) => {
@@ -145,6 +155,7 @@ export async function getAreaRecentFailuresGrouped(areaName: string, daysBack: n
   return {
     area,
     windowDays: daysBack,
+    env,
     reasonsMax: 4,
     items,
   };

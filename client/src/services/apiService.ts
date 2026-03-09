@@ -2,9 +2,11 @@ import type { AreaSummaryResponse } from "../types/AreaSummary";
 import type { AreaItem } from "../types/Area";
 import type { AreaHealthResponse, EnvHealthResponse } from "../types/Health";
 import type { AreasDashboardResponse } from "../types/Dashboard";
-import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped";
+import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped"; // <-- חדש
 
 const API_BASE_URL = "http://localhost:5000/api";
+
+export type EnvFilter = "qa" | "release" | "sandbox";
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -47,9 +49,10 @@ export const getEnvHealth = async (
 };
 
 export const getAreasDashboard = async (
-  daysBack: number = 8
+  daysBack: number = 8,
+  env: EnvFilter = "qa"
 ): Promise<AreasDashboardResponse> => {
-  const url = `${API_BASE_URL}/areas/dashboard?daysBack=${daysBack}`;
+  const url = `${API_BASE_URL}/areas/dashboard?daysBack=${daysBack}&env=${env}`;
   const response = await fetch(url);
   return handleResponse<AreasDashboardResponse>(response);
 };
@@ -57,10 +60,10 @@ export const getAreasDashboard = async (
 export const getAreaRecentFailuresGrouped = async (
   areaName: string,
   windowDays: number = 10,
-  limit: number = 200
+  limit: number = 200,
+  env: EnvFilter = "qa"
 ): Promise<AreaRecentFailuresGroupedResponse> => {
-  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/recent-failures-grouped?windowDays=${windowDays}&limit=${limit}`;
+  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/recent-failures-grouped?windowDays=${windowDays}&limit=${limit}&env=${env}`;
   const response = await fetch(url);
   return handleResponse<AreaRecentFailuresGroupedResponse>(response);
 };
-

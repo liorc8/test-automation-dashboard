@@ -1,8 +1,14 @@
+export type ReasonEntry = {
+  text: string;
+  screenshotLink: string | null;
+  logLink: string | null;
+};
+
 export type RecentFailureGroupedItem = {
   testName: string;
   failCount: number;
   lastFailedOn: string | null;
-  reasons: string[];
+  reasons: ReasonEntry[];
   lastFailure: {
     server: string | null;
     almaVersion: string | null;

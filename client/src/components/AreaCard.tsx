@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { EnvFilter } from '../services/apiService';
+import type { EnvFilter, DailyTrendPoint } from '../services/apiService';
+import { getAreaDailyTrend } from '../services/apiService';
 import type { HealthBuckets } from '../types/Dashboard';
 import { Card, CardContent, Typography, Box, Chip, Button } from '@mui/material';
+import AreaTrendChart from './AreaTrendChart';
 
 interface AreaCardProps {
   areaName: string;
@@ -28,11 +30,19 @@ const AreaCard: React.FC<AreaCardProps> = ({
   health,
 }) => {
   const navigate = useNavigate();
+  const [trendData, setTrendData] = useState<DailyTrendPoint[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAreaDailyTrend(areaName, 8, env)
+      .then(r => { if (!cancelled) setTrendData(r.points); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [areaName, env]);
 
   let statusColor = '#d32f2f';
   if (passRate > 80) statusColor = '#2e7d32';
   else if (passRate > 50) statusColor = '#ed6c02';
-
 
   const handleViewFailures = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -113,6 +123,8 @@ const AreaCard: React.FC<AreaCardProps> = ({
             ))}
           </Box>
         )}
+
+        <AreaTrendChart data={trendData} />
 
         {failed > 0 && (
           <Button

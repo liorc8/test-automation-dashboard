@@ -6,7 +6,7 @@ import AreaCard from "../components/AreaCard";
 import EnvToggle from "../components/EnvToggle";
 import { getAreas, getAreasDashboard, type EnvFilter } from "../services/apiService";
 import type { AreaItem } from "../types/Area";
-import type { AreasDashboardResponse } from "../types/Dashboard";
+import type { AreasDashboardResponse, HealthBuckets } from "../types/Dashboard";
 
 type AreaCardVM = {
   id: string;
@@ -16,6 +16,7 @@ type AreaCardVM = {
   total: number;
   passed: number;
   failed: number;
+  health: HealthBuckets;
 };
 
 const DashboardPage: React.FC = () => {
@@ -49,16 +50,17 @@ const DashboardPage: React.FC = () => {
 
         const vm: AreaCardVM[] = areas.map((a) => {
           const item = byArea.get(a.id.toUpperCase());
-          const w = item?.window;
+          const l = item?.last;
 
           return {
             id: a.id,
             name: a.name,
             lastRunDay: item?.lastRunDay ?? null,
-            passRate: w?.passRate ?? 0,
-            total: w?.total ?? 0,
-            passed: w?.passed ?? 0,
-            failed: w?.failed ?? 0,
+            passRate: l?.passRate ?? 0,
+            total: l?.total ?? 0,
+            passed: l?.passed ?? 0,
+            failed: l?.failed ?? 0,
+            health: item?.health ?? { healthy: 0, medium: 0, bad: 0, dead: 0 },
           };
         });
 
@@ -113,6 +115,7 @@ const DashboardPage: React.FC = () => {
                 failed={c.failed}
                 lastRunDay={c.lastRunDay}
                 env={env}
+                health={c.health}
               />
             </Grid>
           ))}

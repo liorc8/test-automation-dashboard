@@ -38,26 +38,56 @@ test_stats AS (
   GROUP BY TESTNAME
 ),
 reason_counts AS (
+  -- Outer query applies ROW_NUMBER using already-aggregated LAST_SCREENSHOT.
+  -- Primary reason (RN=1) = most recent failure that has a screenshot,
+  -- falling back to most recent without screenshot.
   SELECT
     TESTNAME,
     REASON_KEY,
-    COUNT(*) AS CNT,
-    MAX(ENDINGTIMEUNIX) AS LAST_SEEN_UNIX,
+    CNT,
+    LAST_SEEN_UNIX,
+    LAST_TESTEDON,
+    LAST_SCREENSHOT,
+    LAST_LOGLINK,
     ROW_NUMBER() OVER (
       PARTITION BY TESTNAME
-      ORDER BY COUNT(*) DESC, MAX(ENDINGTIMEUNIX) DESC
+      ORDER BY
+        CASE WHEN LAST_SCREENSHOT IS NOT NULL THEN 0 ELSE 1 END ASC,
+        LAST_SEEN_UNIX DESC
     ) AS RN
-  FROM failures
-  WHERE REASON_KEY IS NOT NULL
-  GROUP BY TESTNAME, REASON_KEY
+  FROM (
+    SELECT
+      TESTNAME,
+      REASON_KEY,
+      COUNT(*) AS CNT,
+      MAX(ENDINGTIMEUNIX) AS LAST_SEEN_UNIX,
+      MAX(TESTEDON) AS LAST_TESTEDON,
+      MAX(SCREENSHOTLINK) KEEP (DENSE_RANK LAST ORDER BY ENDINGTIMEUNIX) AS LAST_SCREENSHOT,
+      MAX(LOGLINK)        KEEP (DENSE_RANK LAST ORDER BY ENDINGTIMEUNIX) AS LAST_LOGLINK
+    FROM failures
+    WHERE REASON_KEY IS NOT NULL
+    GROUP BY TESTNAME, REASON_KEY
+  )
 ),
 top_reasons AS (
   SELECT
     TESTNAME,
-    MAX(CASE WHEN RN = 1 THEN REASON_KEY END) AS REASON1,
-    MAX(CASE WHEN RN = 2 THEN REASON_KEY END) AS REASON2,
-    MAX(CASE WHEN RN = 3 THEN REASON_KEY END) AS REASON3,
-    MAX(CASE WHEN RN = 4 THEN REASON_KEY END) AS REASON4
+    MAX(CASE WHEN RN = 1 THEN REASON_KEY END)      AS REASON1,
+    MAX(CASE WHEN RN = 1 THEN LAST_TESTEDON END)   AS REASON1_DATE,
+    MAX(CASE WHEN RN = 1 THEN LAST_SCREENSHOT END) AS REASON1_SCREENSHOT,
+    MAX(CASE WHEN RN = 1 THEN LAST_LOGLINK END)    AS REASON1_LOGLINK,
+    MAX(CASE WHEN RN = 2 THEN REASON_KEY END)      AS REASON2,
+    MAX(CASE WHEN RN = 2 THEN LAST_TESTEDON END)   AS REASON2_DATE,
+    MAX(CASE WHEN RN = 2 THEN LAST_SCREENSHOT END) AS REASON2_SCREENSHOT,
+    MAX(CASE WHEN RN = 2 THEN LAST_LOGLINK END)    AS REASON2_LOGLINK,
+    MAX(CASE WHEN RN = 3 THEN REASON_KEY END)      AS REASON3,
+    MAX(CASE WHEN RN = 3 THEN LAST_TESTEDON END)   AS REASON3_DATE,
+    MAX(CASE WHEN RN = 3 THEN LAST_SCREENSHOT END) AS REASON3_SCREENSHOT,
+    MAX(CASE WHEN RN = 3 THEN LAST_LOGLINK END)    AS REASON3_LOGLINK,
+    MAX(CASE WHEN RN = 4 THEN REASON_KEY END)      AS REASON4,
+    MAX(CASE WHEN RN = 4 THEN LAST_TESTEDON END)   AS REASON4_DATE,
+    MAX(CASE WHEN RN = 4 THEN LAST_SCREENSHOT END) AS REASON4_SCREENSHOT,
+    MAX(CASE WHEN RN = 4 THEN LAST_LOGLINK END)    AS REASON4_LOGLINK
   FROM reason_counts
   WHERE RN <= 4
   GROUP BY TESTNAME
@@ -83,9 +113,21 @@ FROM (
     -- Raw unix ms – date formatting is done in Node.js to avoid Oracle timezone issues.
     s.LAST_ENDING_UNIX AS LAST_ENDING_UNIX,
     tr.REASON1,
+    tr.REASON1_DATE,
+    tr.REASON1_SCREENSHOT,
+    tr.REASON1_LOGLINK,
     tr.REASON2,
+    tr.REASON2_DATE,
+    tr.REASON2_SCREENSHOT,
+    tr.REASON2_LOGLINK,
     tr.REASON3,
+    tr.REASON3_DATE,
+    tr.REASON3_SCREENSHOT,
+    tr.REASON3_LOGLINK,
     tr.REASON4,
+    tr.REASON4_DATE,
+    tr.REASON4_SCREENSHOT,
+    tr.REASON4_LOGLINK,
     lf.SERVER,
     lf.ALMAVERSION,
     lf.BUILDNUMBER,
@@ -105,6 +147,19 @@ function formatUnixMs(x: unknown): string | null {
   const n = typeof x === "number" ? x : Number(x);
   if (!Number.isFinite(n) || n <= 0) return null;
   const d = new Date(n);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
+// Formats an Oracle DATE value (returned as JS Date by oracledb) to DD/MM/YYYY HH:MM
+function formatDate(x: unknown): string | null {
+  if (!x) return null;
+  const d = x instanceof Date ? x : new Date(x as any);
+  if (isNaN(d.getTime())) return null;
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
@@ -133,9 +188,25 @@ export async function getAreaRecentFailuresGrouped(
   const rows = (res.rows ?? []) as any[];
 
   const items = rows.map((r) => {
-    const reasons = [r.REASON1, r.REASON2, r.REASON3, r.REASON4]
-      .map(cleanReason)
-      .filter(Boolean) as string[];
+    const reasonSlots = [
+      { key: r.REASON1, date: r.REASON1_DATE, screenshot: r.REASON1_SCREENSHOT, logLink: r.REASON1_LOGLINK },
+      { key: r.REASON2, date: r.REASON2_DATE, screenshot: r.REASON2_SCREENSHOT, logLink: r.REASON2_LOGLINK },
+      { key: r.REASON3, date: r.REASON3_DATE, screenshot: r.REASON3_SCREENSHOT, logLink: r.REASON3_LOGLINK },
+      { key: r.REASON4, date: r.REASON4_DATE, screenshot: r.REASON4_SCREENSHOT, logLink: r.REASON4_LOGLINK },
+    ];
+
+    const reasons = reasonSlots
+      .map((slot) => {
+        const text = cleanReason(slot.key);
+        if (!text) return null;
+        return {
+          text,
+          lastDate: formatDate(slot.date),
+          screenshotLink: (slot.screenshot ?? null) as string | null,
+          logLink: (slot.logLink ?? null) as string | null,
+        };
+      })
+      .filter(Boolean) as Array<{ text: string; lastDate: string | null; screenshotLink: string | null; logLink: string | null }>;
 
     return {
       testName: String(r.TESTNAME),

@@ -10,53 +10,82 @@ function toNumber(x: unknown): number {
 
 function buildSQL(serverFilter: string): string {
   return `
-WITH params AS (
-  SELECT :daysBack AS DAYS_BACK FROM dual
-),
-last_day AS (
-  SELECT UPPER(AREA) AS AREA, MAX(TRUNC(TESTEDON)) AS LAST_DATE
+WITH latest_per_test AS (
+  SELECT
+    UPPER(AREA)               AS AREA,
+    UPPER(TESTNAME)           AS TESTNAME,
+    PASSED,
+    NVL(FAILURETEXT, '')      AS FAILURETEXT,
+    TESTEDON,
+    ROW_NUMBER() OVER (
+      PARTITION BY UPPER(AREA), UPPER(TESTNAME)
+      ORDER BY TESTEDON DESC, NVL(ENDINGTIMEUNIX, 0) DESC
+    ) AS RN
   FROM QA_AUTOMATION.TESTRESULTS
   WHERE 1=1
     ${serverFilter}
-  GROUP BY UPPER(AREA)
 ),
-last_agg AS (
+latest AS (
+  SELECT AREA, TESTNAME, PASSED, FAILURETEXT, TESTEDON
+  FROM latest_per_test
+  WHERE RN = 1
+),
+pass_rate_per_test AS (
   SELECT
-    UPPER(t.AREA) AS AREA,
-    SUM(CASE WHEN LOWER(t.PASSED)='true' THEN 1 ELSE 0 END) AS LAST_PASSED,
-    SUM(CASE WHEN LOWER(t.PASSED)='false' AND NVL(t.FAILURETEXT,'') NOT LIKE '%@BeforeMethod%' THEN 1 ELSE 0 END) AS LAST_FAILED
-  FROM QA_AUTOMATION.TESTRESULTS t
-  JOIN last_day d
-    ON UPPER(t.AREA)=d.AREA AND TRUNC(t.TESTEDON)=d.LAST_DATE
+    UPPER(AREA)     AS AREA,
+    UPPER(TESTNAME) AS TESTNAME,
+    SUM(CASE WHEN LOWER(PASSED)='true'  THEN 1 ELSE 0 END) AS SUCCESSES,
+    SUM(CASE WHEN LOWER(PASSED)='false' THEN 1 ELSE 0 END) AS FAILS
+  FROM QA_AUTOMATION.TESTRESULTS
   WHERE 1=1
     ${serverFilter}
-  GROUP BY UPPER(t.AREA)
+  GROUP BY UPPER(AREA), UPPER(TESTNAME)
 ),
-win_agg AS (
+test_health AS (
   SELECT
-    UPPER(t.AREA) AS AREA,
-    SUM(CASE WHEN LOWER(t.PASSED)='true' THEN 1 ELSE 0 END) AS WIN_PASSED,
-    SUM(CASE WHEN LOWER(t.PASSED)='false' AND NVL(t.FAILURETEXT,'') NOT LIKE '%@BeforeMethod%' THEN 1 ELSE 0 END) AS WIN_FAILED
-  FROM QA_AUTOMATION.TESTRESULTS t
-  CROSS JOIN params p
-  WHERE TRUNC(t.TESTEDON) >= TRUNC(SYSDATE) - p.DAYS_BACK + 1
-    ${serverFilter}
-  GROUP BY UPPER(t.AREA)
+    l.AREA,
+    l.TESTNAME,
+    l.PASSED,
+    l.FAILURETEXT,
+    l.TESTEDON,
+    NVL(p.SUCCESSES, 0) AS SUCCESSES,
+    NVL(p.FAILS, 0)     AS FAILS,
+    CASE
+      WHEN NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0) = 0 THEN 'dead'
+      WHEN ROUND(NVL(p.SUCCESSES, 0) * 100 / (NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0))) > 80 THEN 'healthy'
+      WHEN ROUND(NVL(p.SUCCESSES, 0) * 100 / (NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0))) > 20 THEN 'medium'
+      WHEN ROUND(NVL(p.SUCCESSES, 0) * 100 / (NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0))) > 0  THEN 'bad'
+      ELSE 'dead'
+    END AS HEALTH
+  FROM latest l
+  LEFT JOIN pass_rate_per_test p ON p.AREA = l.AREA AND p.TESTNAME = l.TESTNAME
+),
+area_agg AS (
+  SELECT
+    AREA,
+    COUNT(*)                                                                                        AS TOTAL,
+    TO_CHAR(MAX(TESTEDON), 'YYYY-MM-DD')                                                           AS LAST_RUN_DAY,
+    SUM(CASE WHEN LOWER(PASSED)='true'  THEN 1 ELSE 0 END)                                        AS LAST_PASSED,
+    SUM(CASE WHEN LOWER(PASSED)='false' AND FAILURETEXT NOT LIKE '%@BeforeMethod%' THEN 1 ELSE 0 END) AS LAST_FAILED,
+    SUM(CASE WHEN HEALTH = 'healthy' THEN 1 ELSE 0 END)                                           AS HEALTHY_COUNT,
+    SUM(CASE WHEN HEALTH = 'medium'  THEN 1 ELSE 0 END)                                           AS MEDIUM_COUNT,
+    SUM(CASE WHEN HEALTH = 'bad'     THEN 1 ELSE 0 END)                                           AS BAD_COUNT,
+    SUM(CASE WHEN HEALTH = 'dead'    THEN 1 ELSE 0 END)                                           AS DEAD_COUNT
+  FROM test_health
+  GROUP BY AREA
 )
 SELECT
-  a.AREA,
-  TO_CHAR(d.LAST_DATE, 'YYYY-MM-DD') AS LAST_RUN_DAY,
-  NVL(l.LAST_PASSED, 0) AS LAST_PASSED,
-  NVL(l.LAST_FAILED, 0) AS LAST_FAILED,
-  NVL(w.WIN_PASSED, 0) AS WIN_PASSED,
-  NVL(w.WIN_FAILED, 0) AS WIN_FAILED
-FROM last_day d
-LEFT JOIN last_agg l ON l.AREA = d.AREA
-LEFT JOIN win_agg  w ON w.AREA = d.AREA
-JOIN (
-  SELECT DISTINCT UPPER(AREA) AS AREA FROM QA_AUTOMATION.TESTRESULTS
-) a ON a.AREA = d.AREA
-ORDER BY a.AREA
+  AREA,
+  LAST_RUN_DAY,
+  TOTAL,
+  LAST_PASSED,
+  LAST_FAILED,
+  HEALTHY_COUNT,
+  MEDIUM_COUNT,
+  BAD_COUNT,
+  DEAD_COUNT
+FROM area_agg
+ORDER BY AREA
 `;
 }
 
@@ -64,28 +93,28 @@ export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa")
   const serverFilter = buildServerFilter(env);
   const sql = buildSQL(serverFilter);
 
-  const res = await execute(sql, { daysBack });
+  const res = await execute(sql, {});
   const rows = res.rows ?? [];
 
   const byArea = new Map<string, any>();
   for (const r of rows as any[]) {
     const area = String(r.AREA ?? "").toUpperCase();
 
-    const lastPassed = toNumber(r.LAST_PASSED);
-    const lastFailed = toNumber(r.LAST_FAILED);
-    const lastTotal = lastPassed + lastFailed;
-    const lastPassRate = lastTotal > 0 ? Math.round((lastPassed / lastTotal) * 10000) / 100 : 0;
-
-    const winPassed = toNumber(r.WIN_PASSED);
-    const winFailed = toNumber(r.WIN_FAILED);
-    const winTotal = winPassed + winFailed;
-    const winPassRate = winTotal > 0 ? Math.round((winPassed / winTotal) * 10000) / 100 : 0;
+    const passed  = toNumber(r.LAST_PASSED);
+    const failed  = toNumber(r.LAST_FAILED);
+    const total   = toNumber(r.TOTAL);
+    const passRate = (passed + failed) > 0 ? Math.round((passed / (passed + failed)) * 10000) / 100 : 0;
 
     byArea.set(area, {
       area,
       lastRunDay: r.LAST_RUN_DAY ?? null,
-      last: { passed: lastPassed, failed: lastFailed, total: lastTotal, passRate: lastPassRate },
-      window: { daysBack, passed: winPassed, failed: winFailed, total: winTotal, passRate: winPassRate },
+      last: { passed, failed, total, passRate },
+      health: {
+        healthy: toNumber(r.HEALTHY_COUNT),
+        medium:  toNumber(r.MEDIUM_COUNT),
+        bad:     toNumber(r.BAD_COUNT),
+        dead:    toNumber(r.DEAD_COUNT),
+      },
     });
   }
 
@@ -96,7 +125,7 @@ export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa")
         area,
         lastRunDay: null,
         last: { passed: 0, failed: 0, total: 0, passRate: 0 },
-        window: { daysBack, passed: 0, failed: 0, total: 0, passRate: 0 },
+        health: { healthy: 0, medium: 0, bad: 0, dead: 0 },
       }
     );
   });

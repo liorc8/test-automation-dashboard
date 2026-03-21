@@ -43,48 +43,32 @@ function renderLogLines(lines: string[]) {
   });
 }
 
-/**
- * Truncates the log to only the scope of the failing test.
- * Lines are returned in natural chronological order (earliest first, FATAL last).
- * Scans backwards from the FATAL line to find where the test function was entered,
- * then slices [startIdx..fatalIdx] inclusive.
- */
 function truncateLogToTestScope(logText: string, testName: string): string[] {
-  const lines = logText.split(/\r?\n/).filter((l) => l.trim() !== "");
+  const lines = logText.split(/\r?\n/).filter(l => l.trim() !== '');
 
+  // Find the last FATAL line
   let fatalIdx = -1;
   for (let i = lines.length - 1; i >= 0; i--) {
-    if (lines[i].toUpperCase().includes("FATAL")) {
+    if (lines[i].toUpperCase().includes('FATAL')) {
       fatalIdx = i;
       break;
     }
   }
 
+  // No FATAL — show last 40 lines
   if (fatalIdx === -1) {
     return lines.slice(Math.max(0, lines.length - 40));
   }
 
-  const JAVA_CALL_RE = /\.\w+\((\w+)\.java:\d+\)/;
-  const FRAMEWORK_RE =
-    /^(TestBase|BaseTest|AbstractTest|TestNGBase|BaseClass|TestRunner|RetryAnalyzer|TestListener|TestNGListener|AbstractTestNGSpringContextTests|SpringRunner|SuiteRunner|Suite|TestNG)$/i;
-  const TEST_CLASS_RE = /(Test|Tests|IT|TestCase|TestSuite)$/;
+  // Scan backwards from FATAL to find first line that mentions the test name.
+  // Hard cap: never go back more than 60 lines.
   const nameLower = testName.toLowerCase();
+  let startIdx = Math.max(0, fatalIdx - 60);
 
-  let startIdx = Math.max(0, fatalIdx - 50);
-
-  for (let i = fatalIdx - 1; i >= 0; i--) {
-    const line = lines[i];
-    if (line.toLowerCase().includes(nameLower)) {
+  for (let i = fatalIdx - 1; i >= Math.max(0, fatalIdx - 60); i--) {
+    if (lines[i].toLowerCase().includes(nameLower)) {
       startIdx = i;
       break;
-    }
-    const match = JAVA_CALL_RE.exec(line);
-    if (match) {
-      const className = match[1];
-      if (!FRAMEWORK_RE.test(className) && TEST_CLASS_RE.test(className)) {
-        startIdx = i;
-        break;
-      }
     }
   }
 
@@ -379,6 +363,24 @@ const LogModal: React.FC<LogModalProps> = ({
   </div>
 );
 
+// ─── Fatal preview ────────────────────────────────────────────────────────────
+
+function extractFatalPreview(text: string): string[] {
+  const lines = text.split(/\r?\n/);
+  let fatalIdx = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].toUpperCase().includes('FATAL')) {
+      fatalIdx = i;
+      break;
+    }
+  }
+  if (fatalIdx === -1) {
+    return lines.slice(Math.max(0, lines.length - 4)).filter(l => l.trim() !== '');
+  }
+  const start = Math.max(0, fatalIdx - 3);
+  return lines.slice(start, fatalIdx + 1).filter(l => l.trim() !== '');
+}
+
 // ─── Reason block ─────────────────────────────────────────────────────────────
 
 interface ReasonBlockProps {
@@ -394,11 +396,7 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({
   testName,
   onExpandLog,
 }) => {
-  const previewLines = reason.text.split(/\r?\n/).slice(0, 12);
-  const totalLines = reason.text
-    .split(/\r?\n/)
-    .filter((l) => l.trim()).length;
-  const hasMore = totalLines > 12;
+  const previewLines = extractFatalPreview(reason.text ?? '');
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -419,18 +417,6 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({
             }}
           >
             {renderLogLines(previewLines)}
-            {hasMore && (
-              <div
-                style={{
-                  color: "#334155",
-                  fontStyle: "italic",
-                  padding: "3px 11px",
-                  fontSize: 10,
-                }}
-              >
-                … {totalLines - 12} more lines — expand to see all
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -513,10 +499,10 @@ const FailureCard: React.FC<FailureCardProps> = ({
   const [cardHovered, setCardHovered] = useState(false);
 
   const primary = item.reasons[0] ?? null;
-  const extra = item.reasons.slice(1);
+  const extra = item.reasons.slice(1, 3);
   const screenshotSrc =
-    item.lastFailure.screenshotLink ??
     item.reasons[0]?.screenshotLink ??
+    item.lastFailure.screenshotLink ??
     null;
   const color = severityColor(item.failCount);
 
@@ -599,6 +585,38 @@ const FailureCard: React.FC<FailureCardProps> = ({
             {item.testName}
           </span>
 
+          {item.lastFailure.server && (
+            <span style={{
+              background: '#f1f5f9',
+              color: '#475569',
+              borderRadius: 4,
+              padding: '2px 7px',
+              fontSize: 11,
+              fontWeight: 500,
+              flexShrink: 0,
+              letterSpacing: '0.02em',
+              lineHeight: 1.5,
+              border: '1px solid #e2e8f0',
+            }}>
+              🖥️ {item.lastFailure.server}
+            </span>
+          )}
+          {item.lastFailure.almaVersion && (
+            <span style={{
+              background: '#f1f5f9',
+              color: '#475569',
+              borderRadius: 4,
+              padding: '2px 7px',
+              fontSize: 11,
+              fontWeight: 500,
+              flexShrink: 0,
+              letterSpacing: '0.02em',
+              lineHeight: 1.5,
+              border: '1px solid #e2e8f0',
+            }}>
+              📦 {item.lastFailure.almaVersion}
+            </span>
+          )}
           <span
             style={{
               background: color,
@@ -612,24 +630,43 @@ const FailureCard: React.FC<FailureCardProps> = ({
               lineHeight: 1.6,
             }}
           >
-            {item.failCount} {item.failCount === 1 ? "failure" : "failures"}
+            Failed {item.failCount} {item.failCount === 1 ? "time" : "times"} in {WINDOW_DAYS} days
           </span>
         </div>
 
         {/* Primary reason */}
         {primary && (
           <div>
-            <div
-              style={{
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 7,
+            }}>
+              <span style={{
                 fontSize: 10,
                 fontWeight: 700,
                 color: "#94a3b8",
                 textTransform: "uppercase",
                 letterSpacing: "0.07em",
-                marginBottom: 7,
-              }}
-            >
-              Primary Reason
+              }}>
+                Primary Reason
+              </span>
+              {primary.lastDate && (
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#64748b',
+                  background: '#f1f5f9',
+                  borderRadius: 4,
+                  padding: '1px 7px',
+                  border: '1px solid #e2e8f0',
+                }}>
+                  📅 {primary.lastDate.endsWith('00:00')
+                    ? primary.lastDate.split(' ')[0]
+                    : primary.lastDate}
+                </span>
+              )}
             </div>
             <ReasonBlock
               reason={primary}
@@ -689,17 +726,36 @@ const FailureCard: React.FC<FailureCardProps> = ({
               >
                 {extra.map((reason, i) => (
                   <div key={i}>
-                    <div
-                      style={{
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginBottom: 7,
+                    }}>
+                      <span style={{
                         fontSize: 10,
                         fontWeight: 700,
                         color: "#94a3b8",
                         textTransform: "uppercase",
                         letterSpacing: "0.07em",
-                        marginBottom: 7,
-                      }}
-                    >
-                      Reason {i + 2}
+                      }}>
+                        Reason {i + 2}
+                      </span>
+                      {reason.lastDate && (
+                        <span style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#64748b',
+                          background: '#f1f5f9',
+                          borderRadius: 4,
+                          padding: '1px 7px',
+                          border: '1px solid #e2e8f0',
+                        }}>
+                          📅 {reason.lastDate.endsWith('00:00')
+                            ? reason.lastDate.split(' ')[0]
+                            : reason.lastDate}
+                        </span>
+                      )}
                     </div>
                     <ReasonBlock
                       reason={reason}
@@ -727,30 +783,6 @@ const FailureCard: React.FC<FailureCardProps> = ({
             borderTop: "1px solid #f1f5f9",
           }}
         >
-          {item.lastFailedOn && (
-            <Chip
-              label={`🕐 ${item.lastFailedOn}`}
-              size="small"
-              variant="outlined"
-              sx={{ fontSize: 11, color: "#475569", borderColor: "#e2e8f0" }}
-            />
-          )}
-          {item.lastFailure.server && (
-            <Chip
-              label={`🖥️ ${item.lastFailure.server}`}
-              size="small"
-              variant="outlined"
-              sx={{ fontSize: 11, color: "#475569", borderColor: "#e2e8f0" }}
-            />
-          )}
-          {item.lastFailure.almaVersion && (
-            <Chip
-              label={`📦 ${item.lastFailure.almaVersion}`}
-              size="small"
-              variant="outlined"
-              sx={{ fontSize: 11, color: "#475569", borderColor: "#e2e8f0" }}
-            />
-          )}
           {(item.lastFailure.buildNumber ?? 0) > 0 && (
             <Chip
               label={`🔨 Build ${item.lastFailure.buildNumber}`}

@@ -15,7 +15,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/test-results", testResultsRoutes);
-app.use("/api/areas", areasRoutes); 
+app.use("/api/areas", areasRoutes);
 app.use("/api/envs", envsRoutes);
 
 app.get("/health", (req: Request, res: Response) => {

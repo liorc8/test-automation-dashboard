@@ -1,5 +1,6 @@
 export type ReasonEntry = {
   text: string;
+  lastDate: string | null;
   screenshotLink: string | null;
   logLink: string | null;
 };

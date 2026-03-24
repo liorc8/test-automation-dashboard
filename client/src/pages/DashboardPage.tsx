@@ -66,7 +66,7 @@ const DashboardPage: React.FC = () => {
           };
         });
 
-        setCards(vm);
+        setCards([...vm].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load dashboard");
       } finally {

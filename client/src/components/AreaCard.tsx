@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import type { EnvFilter, DailyTrendPoint } from '../services/apiService';
 import { getAreaDailyTrend } from '../services/apiService';
 import type { HealthBuckets } from '../types/Dashboard';
-import { Card, CardContent, Typography, Box, Chip, Button } from '@mui/material';
+import { Card, CardContent, Typography, Box, Chip, Button, IconButton, Tooltip } from '@mui/material';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import AreaTrendChart from './AreaTrendChart';
 
 interface AreaCardProps {
@@ -16,6 +18,8 @@ interface AreaCardProps {
   lastRunDay?: string | null;
   env?: EnvFilter;
   health?: HealthBuckets;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 const AreaCard: React.FC<AreaCardProps> = ({
@@ -28,6 +32,8 @@ const AreaCard: React.FC<AreaCardProps> = ({
   lastRunDay,
   env = "qa",
   health,
+  isFavorite = false,
+  onToggleFavorite,
 }) => {
   const navigate = useNavigate();
   const [trendData, setTrendData] = useState<DailyTrendPoint[]>([]);
@@ -61,9 +67,21 @@ const AreaCard: React.FC<AreaCardProps> = ({
       data-area={areaName}
     >
       <CardContent>
-        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-          {displayName}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+            {displayName}
+          </Typography>
+          <Tooltip title={isFavorite ? 'Remove from My Areas' : 'Add to My Areas'}>
+            <IconButton
+              size="small"
+              aria-label={isFavorite ? 'Remove from My Areas' : 'Add to My Areas'}
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(); }}
+              sx={{ color: isFavorite ? '#f59e0b' : '#9e9e9e', transition: 'color 0.2s', ml: 0.5 }}
+            >
+              {isFavorite ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h3" sx={{ color: statusColor, fontWeight: 'bold' }}>

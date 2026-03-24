@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Container, Typography, Box, Alert, CircularProgress } from "@mui/material";
+import { Container, Typography, Box, Alert, CircularProgress, Divider } from "@mui/material";
 import Grid from "@mui/material/Grid";
 
 import AreaCard from "../components/AreaCard";
 import EnvToggle from "../components/EnvToggle";
+import { useFavorites } from "../hooks/useFavorites";
 import { getAreas, getAreasDashboard, type EnvFilter } from "../services/apiService";
 import type { AreaItem } from "../types/Area";
 import type { AreasDashboardResponse, HealthBuckets } from "../types/Dashboard";
@@ -23,6 +24,7 @@ const DashboardPage: React.FC = () => {
   const [cards, setCards] = useState<AreaCardVM[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [env, setEnv] = useState<EnvFilter>(
     () => (localStorage.getItem("selectedEnv") as EnvFilter) ?? "qa"
   );
@@ -103,23 +105,67 @@ const DashboardPage: React.FC = () => {
       {!loading && error && <Alert severity="error">{error}</Alert>}
 
       {!loading && !error && (
-        <Grid container spacing={3}>
-          {cards.map((c) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }} key={c.id}>
-              <AreaCard
-                areaName={c.id}
-                displayName={c.name}
-                passRate={c.passRate}
-                total={c.total}
-                passed={c.passed}
-                failed={c.failed}
-                lastRunDay={c.lastRunDay}
-                env={env}
-                health={c.health}
-              />
-            </Grid>
-          ))}
-        </Grid>
+        <>
+          {(() => {
+            const favoriteCards = cards.filter(c => isFavorite(c.id));
+            const otherCards = cards.filter(c => !isFavorite(c.id));
+            return (
+              <>
+                {favoriteCards.length > 0 && (
+                  <>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      ⭐ My Areas
+                    </Typography>
+                    <Grid container spacing={3}>
+                      {favoriteCards.map((c) => (
+                        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }} key={c.id}>
+                          <AreaCard
+                            areaName={c.id}
+                            displayName={c.name}
+                            passRate={c.passRate}
+                            total={c.total}
+                            passed={c.passed}
+                            failed={c.failed}
+                            lastRunDay={c.lastRunDay}
+                            env={env}
+                            health={c.health}
+                            isFavorite={true}
+                            onToggleFavorite={() => toggleFavorite(c.id)}
+                          />
+                        </Grid>
+                      ))}
+                    </Grid>
+                    <Divider sx={{ my: 3 }} />
+                  </>
+                )}
+                {favoriteCards.length > 0 && (
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    All Areas
+                  </Typography>
+                )}
+                <Grid container spacing={3}>
+                  {otherCards.map((c) => (
+                    <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }} key={c.id}>
+                      <AreaCard
+                        areaName={c.id}
+                        displayName={c.name}
+                        passRate={c.passRate}
+                        total={c.total}
+                        passed={c.passed}
+                        failed={c.failed}
+                        lastRunDay={c.lastRunDay}
+                        env={env}
+                        health={c.health}
+                        isFavorite={false}
+                        onToggleFavorite={() => toggleFavorite(c.id)}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </>
+            );
+          })()}
+        </>
       )}
     </Container>
   );

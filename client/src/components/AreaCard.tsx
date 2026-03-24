@@ -6,6 +6,7 @@ import type { HealthBuckets } from '../types/Dashboard';
 import { Card, CardContent, Typography, Box, Chip, Button, IconButton, Tooltip } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import AreaTrendChart from './AreaTrendChart';
 
 interface AreaCardProps {
@@ -50,11 +51,6 @@ const AreaCard: React.FC<AreaCardProps> = ({
   if (passRate > 80) statusColor = '#2e7d32';
   else if (passRate > 50) statusColor = '#ed6c02';
 
-  const handleViewFailures = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/failures/${areaName}?env=${env}`);
-  };
-
   return (
     <Card
       sx={{
@@ -62,7 +58,7 @@ const AreaCard: React.FC<AreaCardProps> = ({
         position: 'relative',
         borderTop: `4px solid ${statusColor}`,
         boxShadow: 2,
-        '&:hover': { boxShadow: 6, cursor: 'pointer' },
+        '&:hover': { boxShadow: 6 },
       }}
       data-area={areaName}
     >
@@ -98,7 +94,7 @@ const AreaCard: React.FC<AreaCardProps> = ({
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 0 }}>
           <Chip
             label={`${passed} Passed`}
             size="small"
@@ -110,6 +106,30 @@ const AreaCard: React.FC<AreaCardProps> = ({
             sx={{ bgcolor: '#ffebee', color: '#c62828', fontSize: '0.7rem' }}
           />
         </Box>
+
+        {failed > 0 ? (
+          <Button
+            variant="outlined"
+            color="primary"
+            fullWidth
+            size="small"
+            startIcon={<ManageSearchIcon fontSize="small" />}
+            onClick={(e) => { e.stopPropagation(); navigate(`/failures/${areaName}?env=${env}`); }}
+            sx={{ my: 1.5, textTransform: 'none' }}
+          >
+            View Recent Failures
+          </Button>
+        ) : (
+          <Button
+            variant="outlined"
+            fullWidth
+            size="small"
+            disabled
+            sx={{ my: 1.5, textTransform: 'none' }}
+          >
+            No Recent Failures
+          </Button>
+        )}
 
         {health && (
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5, mb: 1.5 }}>
@@ -144,30 +164,8 @@ const AreaCard: React.FC<AreaCardProps> = ({
 
         <AreaTrendChart data={trendData} />
 
-        {failed > 0 && (
-          <Button
-            size="small"
-            variant="text"
-            onClick={handleViewFailures}
-            sx={{
-              color: '#c62828',
-              fontSize: '0.72rem',
-              textTransform: 'none',
-              p: 0,
-              minWidth: 0,
-              '&:hover': { textDecoration: 'underline', bgcolor: 'transparent' },
-            }}
-          >
-            ⚠️ Recent Failures
-          </Button>
-        )}
 
-        <Typography
-          variant="caption"
-          sx={{ position: 'absolute', bottom: 10, right: 15, color: '#999' }}
-        >
-          {lastRunDay ?? ''}
-        </Typography>
+
       </CardContent>
     </Card>
   );

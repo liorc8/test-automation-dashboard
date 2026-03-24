@@ -80,14 +80,27 @@ const DashboardPage: React.FC = () => {
   return (
     <Container maxWidth={false} disableGutters sx={{ px: 3, py: 3 }}>
 
-      {/* Header row: title + QA/Release toggle */}
-      <Box sx={{ mb: 3, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
-        <Box>
-          <Typography variant="h4" fontWeight="bold">
-            Automation Status Overview
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Real-time status of all Alma testing areas
+      {/* Header row: title + live status + env toggle */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2, mb: 4 }}>
+        <Typography variant="h3" fontWeight="bold">
+          Automation Dashboard
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+          <Box sx={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: error ? 'error.main' : loading ? 'text.disabled' : 'success.main',
+            ...((!error && !loading) && {
+              animation: 'livePulse 2s ease-in-out infinite',
+              '@keyframes livePulse': {
+                '0%, 100%': { boxShadow: '0 0 0 0 rgba(46, 125, 50, 0.5)' },
+                '50%': { boxShadow: '0 0 0 6px rgba(46, 125, 50, 0)' },
+              },
+            }),
+          }} />
+          <Typography variant="subtitle1" color="text.secondary">
+            Live test results
           </Typography>
         </Box>
         <EnvToggle value={env} onChange={handleEnvChange} />

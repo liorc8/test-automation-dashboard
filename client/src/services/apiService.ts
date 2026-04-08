@@ -2,7 +2,8 @@ import type { AreaSummaryResponse } from "../types/AreaSummary";
 import type { AreaItem } from "../types/Area";
 import type { AreaHealthResponse, EnvHealthResponse } from "../types/Health";
 import type { AreasDashboardResponse } from "../types/Dashboard";
-import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped"; // <-- חדש
+import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped";
+import type { LatestFailedTestsResponse } from "../types/LatestFailed";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -118,4 +119,13 @@ export const getAreaRecentFailuresGrouped = async (
   const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/recent-failures-grouped?windowDays=${windowDays}&limit=${limit}&env=${env}`;
   const response = await fetch(url);
   return handleResponse<AreaRecentFailuresGroupedResponse>(response);
+};
+
+export const getAreaLatestFailedTests = async (
+  areaName: string,
+  env: EnvFilter = "qa"
+): Promise<LatestFailedTestsResponse> => {
+  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/latest-failed-tests?env=${env}`;
+  const response = await fetch(url);
+  return handleResponse<LatestFailedTestsResponse>(response);
 };

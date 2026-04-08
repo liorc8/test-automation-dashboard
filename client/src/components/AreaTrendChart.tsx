@@ -83,7 +83,7 @@ const AreaTrendChart: React.FC<Props> = ({ data }) => {
   const formatted: FormattedPoint[] = data.map(d => ({
     ...d,
     passRate: d.total > 0 ? Math.round((d.passed / d.total) * 100) : null,
-    label: d.date.slice(5).replace('-', '/'),
+    label: d.date.slice(8) + '/' + d.date.slice(5, 7),
   }));
 
   const thresholdTop = (1 - 0.80) * CAPSULE_H;

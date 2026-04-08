@@ -104,6 +104,31 @@ last_failure AS (
     FROM failures f
   )
   WHERE RN = 1
+),
+-- latest_in_window: the absolute latest *meaningful* run per test within the window.
+-- "Meaningful" means the same @BeforeMethod exclusion applied to the failures CTE,
+-- so that latest_in_window and last_failure always refer to the same row-set.
+-- This prevents a @BeforeMethod failure row from being treated as the latest run
+-- while last_failure picks a different (older, possibly different-server) row.
+-- Passing rows are always included (NVL of NULL FAILURETEXT → '' → NOT LIKE is true).
+-- Same area + env filter prevents cross-environment state pollution.
+latest_in_window AS (
+  SELECT TESTNAME, LOWER(PASSED) AS LAST_PASSED
+  FROM (
+    SELECT
+      TESTNAME,
+      PASSED,
+      ROW_NUMBER() OVER (
+        PARTITION BY TESTNAME
+        ORDER BY TESTEDON DESC, NVL(ENDINGTIMEUNIX, 0) DESC
+      ) AS RN
+    FROM QA_AUTOMATION.TESTRESULTS
+    WHERE UPPER(AREA) = :area
+      AND TRUNC(TESTEDON) >= TRUNC(SYSDATE) - :daysBack + 1
+      AND NVL(FAILURETEXT, '') NOT LIKE '%@BeforeMethod%'
+      ${serverFilter}
+  )
+  WHERE RN = 1
 )
 SELECT *
 FROM (
@@ -136,13 +161,18 @@ FROM (
   FROM test_stats s
   LEFT JOIN top_reasons tr ON tr.TESTNAME = s.TESTNAME
   LEFT JOIN last_failure lf ON lf.TESTNAME = s.TESTNAME
+  -- INNER JOIN enforces the rule: only include tests whose latest run in the
+  -- window is still a failure. Tests that recovered (last run = passed) are excluded.
+  JOIN latest_in_window liw
+    ON liw.TESTNAME = s.TESTNAME
+   AND liw.LAST_PASSED = 'false'
   ORDER BY s.FAIL_COUNT DESC, s.LAST_ENDING_UNIX DESC NULLS LAST
 )
 WHERE ROWNUM <= :limit
 `;
 }
 
-// Converts a unix timestamp in milliseconds to DD/MM/YYYY HH:MM (local server time)
+// Converts a unix timestamp in milliseconds to YYYY-MM-DD (date only, local server time)
 function formatUnixMs(x: unknown): string | null {
   const n = typeof x === "number" ? x : Number(x);
   if (!Number.isFinite(n) || n <= 0) return null;
@@ -150,12 +180,10 @@ function formatUnixMs(x: unknown): string | null {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-// Formats an Oracle DATE value (returned as JS Date by oracledb) to DD/MM/YYYY HH:MM
+// Formats an Oracle DATE value (returned as JS Date by oracledb) to YYYY-MM-DD (date only)
 function formatDate(x: unknown): string | null {
   if (!x) return null;
   const d = x instanceof Date ? x : new Date(x as any);
@@ -163,9 +191,7 @@ function formatDate(x: unknown): string | null {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function toNumber(x: unknown): number | null {

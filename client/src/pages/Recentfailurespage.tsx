@@ -565,13 +565,6 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, onImageClick,
                       {test.testName}
                     </span>
 
-                    {/* Date */}
-                    {test.testedOn && (
-                      <span style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0, whiteSpace: "nowrap" }}>
-                        {dateOnly(test.testedOn)}
-                      </span>
-                    )}
-
                     {/* Chevron */}
                     <KeyboardArrowDownIcon sx={{
                       fontSize: 18, color: isOpen ? "#dc2626" : "#94a3b8", flexShrink: 0,
@@ -644,8 +637,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({ active, onChange }) => {
       padding: 4,
       gap: 2,
     }}>
-      {btn(0, "Recent Failures View")}
-      {btn(1, "Latest Failed View")}
+      {btn(0, "Full View")}
+      {btn(1, "List View")}
     </div>
   );
 };
@@ -741,14 +734,27 @@ const RecentFailuresPage: React.FC = () => {
         }}>← Dashboard</button>
 
         <div style={{ flex: 1 }}>
+          {/* Main page title */}
           <div style={{
-            fontSize: 18, fontWeight: 800, color: "#1e293b",
+            fontSize: 26, fontWeight: 900, color: "#0f172a",
             fontFamily: "'JetBrains Mono', monospace",
-          }}>{areaName}</div>
-          <div style={{ fontSize: 11, color: "#94a3b8" }}>
-            {activeTab === 0
-              ? `All recent failures · last ${WINDOW_DAYS} days · ${env.toUpperCase()}`
-              : `Currently broken tests · ${env.toUpperCase()}`}
+            letterSpacing: "-0.02em",
+            lineHeight: 1.15,
+          }}>
+            Recent Failures
+          </div>
+          {/* Subtitle: area name + context */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
+            <span style={{
+              fontSize: 13, fontWeight: 700, color: "#475569",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>{areaName}</span>
+            <span style={{ fontSize: 11, color: "#cbd5e1" }}>·</span>
+            <span style={{ fontSize: 12, color: "#94a3b8" }}>
+              {activeTab === 0
+                ? `last ${WINDOW_DAYS} days · ${env.toUpperCase()}`
+                : `latest status · ${env.toUpperCase()}`}
+            </span>
           </div>
         </div>
 

@@ -8,7 +8,7 @@ function toNumber(x: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function buildSQL(serverFilter: string): string {
+function buildSQL(serverFilter: string, daysBack: number): string {
   return `
 WITH latest_per_test AS (
   SELECT
@@ -23,6 +23,7 @@ WITH latest_per_test AS (
     ) AS RN
   FROM QA_AUTOMATION.TESTRESULTS
   WHERE 1=1
+    AND TRUNC(TESTEDON) >= TRUNC(SYSDATE) - :daysBack + 1
     ${serverFilter}
 ),
 latest AS (
@@ -38,6 +39,7 @@ pass_rate_per_test AS (
     SUM(CASE WHEN LOWER(PASSED)='false' THEN 1 ELSE 0 END) AS FAILS
   FROM QA_AUTOMATION.TESTRESULTS
   WHERE 1=1
+    AND TRUNC(TESTEDON) >= TRUNC(SYSDATE) - :daysBack + 1
     ${serverFilter}
   GROUP BY UPPER(AREA), UPPER(TESTNAME)
 ),
@@ -91,9 +93,9 @@ ORDER BY AREA
 
 export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa") {
   const serverFilter = buildServerFilter(env);
-  const sql = buildSQL(serverFilter);
+  const sql = buildSQL(serverFilter, daysBack);
 
-  const res = await execute(sql, {});
+  const res = await execute(sql, { daysBack });
   const rows = res.rows ?? [];
 
   const byArea = new Map<string, any>();

@@ -30,7 +30,6 @@ const AreaCard: React.FC<AreaCardProps> = ({
   total,
   passed,
   failed,
-  lastRunDay,
   env = "qa",
   health,
   isFavorite = false,

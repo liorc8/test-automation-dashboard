@@ -461,17 +461,32 @@ function toGroupedItem(item: LatestFailedTestItem): RecentFailureGroupedItem {
 
 interface LatestFailedViewProps {
   data: LatestFailedTestsResponse;
+  search: string;
   onImageClick: (src: string) => void;
   onExpandLog: (lines: string[], testName: string, label: string) => void;
 }
 
-const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, onImageClick, onExpandLog }) => {
+const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog }) => {
   // Only one test can be open at a time — clicking another auto-closes the previous
   const [openTestName, setOpenTestName] = useState<string | null>(null);
 
   const handleRowClick = (testName: string) => {
     setOpenTestName(prev => (prev === testName ? null : testName));
   };
+
+  // Apply shared search: match testName or server name; drop groups with no matches.
+  const q = search.trim().toLowerCase();
+  const filteredServers = q
+    ? data.servers
+        .map(sg => ({
+          ...sg,
+          tests: sg.tests.filter(t =>
+            t.testName.toLowerCase().includes(q) ||
+            t.server.toLowerCase().includes(q)
+          ),
+        }))
+        .filter(sg => sg.tests.length > 0)
+    : data.servers;
 
   if (data.servers.length === 0) {
     return (
@@ -485,9 +500,21 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, onImageClick,
     );
   }
 
+  if (filteredServers.length === 0) {
+    return (
+      <div style={{
+        background: "#f8fafc", border: "1px solid #e2e8f0",
+        borderRadius: 10, padding: 40, color: "#94a3b8",
+        textAlign: "center", fontSize: 15,
+      }}>
+        No tests match <strong style={{ color: "#475569" }}>"{search}"</strong>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-      {data.servers.map((serverGroup) => (
+      {filteredServers.map((serverGroup) => (
         <div key={serverGroup.server}>
 
           {/* ── Server header ── prominent dark bar */}
@@ -606,18 +633,26 @@ interface ViewToggleProps {
   onChange: (v: number) => void;
 }
 
+// Shared typography token — both the toggle labels and the search input use this
+// so they look like a single cohesive control.
+const TOOLBAR_FONT: React.CSSProperties = {
+  fontFamily: "inherit",
+  fontSize: 14,
+  letterSpacing: "0.01em",
+};
+
 const ViewToggle: React.FC<ViewToggleProps> = ({ active, onChange }) => {
   const btn = (idx: number, label: string) => (
     <button
       onClick={() => onChange(idx)}
       style={{
-        padding: "11px 30px",
+        ...TOOLBAR_FONT,
+        padding: "9px 26px",
         borderRadius: 8,
         border: "none",
         cursor: "pointer",
-        fontSize: 15,
-        fontWeight: 700,
-        letterSpacing: "0.01em",
+        // Active: bold + red; inactive: normal weight + muted — the ONLY visual difference
+        fontWeight: active === idx ? 700 : 400,
         background: active === idx ? "#fff" : "transparent",
         color: active === idx ? "#dc2626" : "#64748b",
         boxShadow: active === idx ? "0 2px 10px rgba(0,0,0,0.10)" : "none",
@@ -778,13 +813,30 @@ const RecentFailuresPage: React.FC = () => {
         )}
       </div>
 
-      {/* ── Prominent view toggle ── */}
+      {/* ── Search + view toggle (shared, always visible) ── */}
       <div style={{
         background: "#fff", borderBottom: "1px solid #e5e7eb",
-        padding: "14px 32px",
-        display: "flex", alignItems: "center",
+        padding: "12px 32px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
+        {/* Toggle aligned left */}
         <ViewToggle active={activeTab} onChange={setActiveTab} />
+
+        {/* Search aligned right — same font token as the toggle labels */}
+        <input
+          type="text"
+          placeholder="Search by test name…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            ...TOOLBAR_FONT,
+            fontWeight: 400,
+            width: 280,
+            border: "1px solid #e2e8f0", borderRadius: 8,
+            padding: "9px 14px", outline: "none",
+            background: "#f8fafc", color: "#1e293b",
+          }}
+        />
       </div>
 
       {/* ── Content ── */}
@@ -815,18 +867,6 @@ const RecentFailuresPage: React.FC = () => {
             {!loading && !error && data && data.items.length > 0 && (
               <>
                 <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-                  <input
-                    type="text"
-                    placeholder="🔍  Search by test name..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    style={{
-                      flex: 1, minWidth: 220,
-                      border: "1px solid #e2e8f0", borderRadius: 8,
-                      padding: "8px 14px", fontSize: 13, outline: "none",
-                      background: "#fff", color: "#1e293b",
-                    }}
-                  />
                   <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
                     style={{
                       border: "1px solid #e2e8f0", borderRadius: 8,
@@ -873,6 +913,7 @@ const RecentFailuresPage: React.FC = () => {
             {!latestLoading && !latestError && latestData && (
               <LatestFailedView
                 data={latestData}
+                search={search}
                 onImageClick={setImageSrc}
                 onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
               />

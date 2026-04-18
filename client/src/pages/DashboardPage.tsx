@@ -12,7 +12,6 @@ import type { AreasDashboardResponse, HealthBuckets } from "../types/Dashboard";
 type AreaCardVM = {
   id: string;
   name: string;
-  lastRunDay: string | null;
   passRate: number;
   total: number;
   passed: number;
@@ -57,7 +56,6 @@ const DashboardPage: React.FC = () => {
           return {
             id: a.id,
             name: a.name,
-            lastRunDay: item?.lastRunDay ?? null,
             passRate: l?.passRate ?? 0,
             total: l?.total ?? 0,
             passed: l?.passed ?? 0,
@@ -139,7 +137,6 @@ const DashboardPage: React.FC = () => {
                             total={c.total}
                             passed={c.passed}
                             failed={c.failed}
-                            lastRunDay={c.lastRunDay}
                             env={env}
                             health={c.health}
                             isFavorite={true}
@@ -166,7 +163,6 @@ const DashboardPage: React.FC = () => {
                         total={c.total}
                         passed={c.passed}
                         failed={c.failed}
-                        lastRunDay={c.lastRunDay}
                         env={env}
                         health={c.health}
                         isFavorite={false}

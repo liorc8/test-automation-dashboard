@@ -16,7 +16,6 @@ interface AreaCardProps {
   total: number;
   passed: number;
   failed: number;
-  lastRunDay?: string | null;
   env?: EnvFilter;
   health?: HealthBuckets;
   isFavorite?: boolean;

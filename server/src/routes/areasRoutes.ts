@@ -8,6 +8,7 @@ import { getAreaRecentFailuresGroupedHandler } from "../controllers/areaRecentFa
 import { getAreaHealthTestsHandler } from "../controllers/areaHealthTestsController";
 import { getAreaDailyTrendHandler } from "../controllers/areaDailyTrendController";
 import { getAreaLatestFailedHandler } from "../controllers/areaLatestFailedController";
+import { getAllAreasDailyTrendHandler } from "../controllers/allAreasDailyTrendController";
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.get("/", getAreasHandler);
 router.get("/:areaName/summary", getAreaSummaryHandler);
 router.get("/:areaName/health", getAreaHealthHandler);
 router.get("/dashboard", getAreasDashboardHandler);
+router.get("/daily-trends", getAllAreasDailyTrendHandler);
 router.get("/:areaName/failures", getAreaFailuresHandler);
 router.get("/:areaName/recent-failures-grouped", getAreaRecentFailuresGroupedHandler);
 router.get("/:areaName/health-tests", getAreaHealthTestsHandler);

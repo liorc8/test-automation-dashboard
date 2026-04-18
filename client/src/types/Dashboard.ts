@@ -14,7 +14,6 @@ export type DashboardTotals = {
 
 export type DashboardAreaItem = {
   area: string;
-  lastRunDay: string | null;
   last: DashboardTotals;
   health: HealthBuckets;
 };

@@ -66,7 +66,6 @@ area_agg AS (
   SELECT
     AREA,
     COUNT(*)                                                                                        AS TOTAL,
-    TO_CHAR(MAX(TESTEDON), 'YYYY-MM-DD')                                                           AS LAST_RUN_DAY,
     SUM(CASE WHEN LOWER(PASSED)='true'  THEN 1 ELSE 0 END)                                        AS LAST_PASSED,
     SUM(CASE WHEN LOWER(PASSED)='false' AND FAILURETEXT NOT LIKE '%@BeforeMethod%' THEN 1 ELSE 0 END) AS LAST_FAILED,
     SUM(CASE WHEN HEALTH = 'healthy' THEN 1 ELSE 0 END)                                           AS HEALTHY_COUNT,
@@ -78,7 +77,6 @@ area_agg AS (
 )
 SELECT
   AREA,
-  LAST_RUN_DAY,
   TOTAL,
   LAST_PASSED,
   LAST_FAILED,
@@ -109,7 +107,6 @@ export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa")
 
     byArea.set(area, {
       area,
-      lastRunDay: r.LAST_RUN_DAY ?? null,
       last: { passed, failed, total, passRate },
       health: {
         healthy: toNumber(r.HEALTHY_COUNT),
@@ -125,7 +122,6 @@ export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa")
     return (
       byArea.get(area) ?? {
         area,
-        lastRunDay: null,
         last: { passed: 0, failed: 0, total: 0, passRate: 0 },
         health: { healthy: 0, medium: 0, bad: 0, dead: 0 },
       }

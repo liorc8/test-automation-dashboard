@@ -11,6 +11,9 @@ export const getAllAreasDailyTrendHandler = async (req: Request, res: Response) 
     if (!Number.isFinite(daysBack) || daysBack <= 0) {
       return res.status(400).json({ error: "daysBack must be a positive number" });
     }
+    if (daysBack > 90) {
+      return res.status(400).json({ error: "daysBack must not exceed 90" });
+    }
 
     const envRaw = (req.query.env as string | undefined)?.toLowerCase();
     const env: EnvFilter =

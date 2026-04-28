@@ -13,10 +13,10 @@ import { getAllAreasDailyTrendHandler } from "../controllers/allAreasDailyTrendC
 const router = Router();
 
 router.get("/", getAreasHandler);
-router.get("/:areaName/summary", getAreaSummaryHandler);
-router.get("/:areaName/health", getAreaHealthHandler);
 router.get("/dashboard", getAreasDashboardHandler);
 router.get("/daily-trends", getAllAreasDailyTrendHandler);
+router.get("/:areaName/summary", getAreaSummaryHandler);
+router.get("/:areaName/health", getAreaHealthHandler);
 router.get("/:areaName/failures", getAreaFailuresHandler);
 router.get("/:areaName/recent-failures-grouped", getAreaRecentFailuresGroupedHandler);
 router.get("/:areaName/health-tests", getAreaHealthTestsHandler);

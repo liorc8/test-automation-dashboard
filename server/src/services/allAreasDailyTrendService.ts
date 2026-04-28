@@ -62,7 +62,7 @@ CROSS JOIN (
 LEFT JOIN daily_counts c
   ON  c.AREA    = a.AREA_ID
   AND c.RUN_DAY = TRUNC(SYSDATE) - (n.N - 1)
-ORDER BY a.AREA_ID, n.N DESC
+ORDER BY a.AREA_ID, n.N ASC
 `;
 }
 

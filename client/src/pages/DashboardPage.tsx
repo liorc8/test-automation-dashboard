@@ -5,7 +5,7 @@ import Grid from "@mui/material/Grid";
 import AreaCard from "../components/AreaCard";
 import EnvToggle from "../components/EnvToggle";
 import { useFavorites } from "../hooks/useFavorites";
-import { getAreas, getAreasDashboard, type EnvFilter } from "../services/apiService";
+import { getAreas, getAreasDashboard, getAllAreasDailyTrends, type EnvFilter, type DailyTrendPoint } from "../services/apiService";
 import type { AreaItem } from "../types/Area";
 import type { AreasDashboardResponse, HealthBuckets } from "../types/Dashboard";
 
@@ -17,6 +17,7 @@ type AreaCardVM = {
   passed: number;
   failed: number;
   health: HealthBuckets;
+  trendData: DailyTrendPoint[];
 };
 
 const DashboardPage: React.FC = () => {
@@ -39,14 +40,20 @@ const DashboardPage: React.FC = () => {
         setLoading(true);
         setError("");
 
-        const [areas, dashboard]: [AreaItem[], AreasDashboardResponse] = await Promise.all([
+        const [areas, dashboard, trendsResponse] = await Promise.all([
           getAreas(),
           getAreasDashboard(8, env),
+          getAllAreasDailyTrends(8, env),
         ]);
 
         const byArea = new Map<string, AreasDashboardResponse["items"][number]>();
         for (const item of dashboard.items) {
           byArea.set(item.area.toUpperCase(), item);
+        }
+
+        const trendsByArea = new Map<string, DailyTrendPoint[]>();
+        for (const [area, points] of Object.entries(trendsResponse.areas)) {
+          trendsByArea.set(area.toUpperCase(), points);
         }
 
         const vm: AreaCardVM[] = areas.map((a) => {
@@ -61,6 +68,7 @@ const DashboardPage: React.FC = () => {
             passed: l?.passed ?? 0,
             failed: l?.failed ?? 0,
             health: item?.health ?? { healthy: 0, medium: 0, bad: 0, dead: 0 },
+            trendData: trendsByArea.get(a.id.toUpperCase()) ?? [],
           };
         });
 
@@ -141,6 +149,7 @@ const DashboardPage: React.FC = () => {
                             health={c.health}
                             isFavorite={true}
                             onToggleFavorite={() => toggleFavorite(c.id)}
+                            trendData={c.trendData}
                           />
                         </Grid>
                       ))}
@@ -167,6 +176,7 @@ const DashboardPage: React.FC = () => {
                         health={c.health}
                         isFavorite={false}
                         onToggleFavorite={() => toggleFavorite(c.id)}
+                        trendData={c.trendData}
                       />
                     </Grid>
                   ))}

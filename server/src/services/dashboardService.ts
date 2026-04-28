@@ -8,7 +8,7 @@ function toNumber(x: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function buildSQL(serverFilter: string): string {
+function buildSQL(serverFilter: string, daysBack: number): string {
   return `
 WITH latest_per_test AS (
   SELECT
@@ -23,6 +23,7 @@ WITH latest_per_test AS (
     ) AS RN
   FROM QA_AUTOMATION.TESTRESULTS
   WHERE 1=1
+    AND TRUNC(TESTEDON) >= TRUNC(SYSDATE) - :daysBack + 1
     ${serverFilter}
 ),
 latest AS (
@@ -38,6 +39,7 @@ pass_rate_per_test AS (
     SUM(CASE WHEN LOWER(PASSED)='false' THEN 1 ELSE 0 END) AS FAILS
   FROM QA_AUTOMATION.TESTRESULTS
   WHERE 1=1
+    AND TRUNC(TESTEDON) >= TRUNC(SYSDATE) - :daysBack + 1
     ${serverFilter}
   GROUP BY UPPER(AREA), UPPER(TESTNAME)
 ),
@@ -64,7 +66,6 @@ area_agg AS (
   SELECT
     AREA,
     COUNT(*)                                                                                        AS TOTAL,
-    TO_CHAR(MAX(TESTEDON), 'YYYY-MM-DD')                                                           AS LAST_RUN_DAY,
     SUM(CASE WHEN LOWER(PASSED)='true'  THEN 1 ELSE 0 END)                                        AS LAST_PASSED,
     SUM(CASE WHEN LOWER(PASSED)='false' AND FAILURETEXT NOT LIKE '%@BeforeMethod%' THEN 1 ELSE 0 END) AS LAST_FAILED,
     SUM(CASE WHEN HEALTH = 'healthy' THEN 1 ELSE 0 END)                                           AS HEALTHY_COUNT,
@@ -76,7 +77,6 @@ area_agg AS (
 )
 SELECT
   AREA,
-  LAST_RUN_DAY,
   TOTAL,
   LAST_PASSED,
   LAST_FAILED,
@@ -91,9 +91,9 @@ ORDER BY AREA
 
 export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa") {
   const serverFilter = buildServerFilter(env);
-  const sql = buildSQL(serverFilter);
+  const sql = buildSQL(serverFilter, daysBack);
 
-  const res = await execute(sql, {});
+  const res = await execute(sql, { daysBack });
   const rows = res.rows ?? [];
 
   const byArea = new Map<string, any>();
@@ -107,7 +107,6 @@ export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa")
 
     byArea.set(area, {
       area,
-      lastRunDay: r.LAST_RUN_DAY ?? null,
       last: { passed, failed, total, passRate },
       health: {
         healthy: toNumber(r.HEALTHY_COUNT),
@@ -123,7 +122,6 @@ export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa")
     return (
       byArea.get(area) ?? {
         area,
-        lastRunDay: null,
         last: { passed: 0, failed: 0, total: 0, passRate: 0 },
         health: { healthy: 0, medium: 0, bad: 0, dead: 0 },
       }

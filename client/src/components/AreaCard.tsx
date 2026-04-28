@@ -16,11 +16,11 @@ interface AreaCardProps {
   total: number;
   passed: number;
   failed: number;
-  lastRunDay?: string | null;
   env?: EnvFilter;
   health?: HealthBuckets;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  trendData?: DailyTrendPoint[];
 }
 
 const AreaCard: React.FC<AreaCardProps> = ({
@@ -30,22 +30,25 @@ const AreaCard: React.FC<AreaCardProps> = ({
   total,
   passed,
   failed,
-  lastRunDay,
   env = "qa",
   health,
   isFavorite = false,
   onToggleFavorite,
+  trendData: trendDataProp,
 }) => {
   const navigate = useNavigate();
-  const [trendData, setTrendData] = useState<DailyTrendPoint[]>([]);
+  const [fetchedTrend, setFetchedTrend] = useState<DailyTrendPoint[]>([]);
 
   useEffect(() => {
+    if (trendDataProp && trendDataProp.length > 0) return;
     let cancelled = false;
     getAreaDailyTrend(areaName, 8, env)
-      .then(r => { if (!cancelled) setTrendData(r.points); })
+      .then(r => { if (!cancelled) setFetchedTrend(r.points); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [areaName, env]);
+  }, [areaName, env, trendDataProp]);
+
+  const trendData = (trendDataProp && trendDataProp.length > 0) ? trendDataProp : fetchedTrend;
 
   let statusColor = '#d32f2f';
   if (passRate > 80) statusColor = '#2e7d32';

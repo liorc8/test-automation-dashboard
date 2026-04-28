@@ -5,7 +5,7 @@ import type { AreasDashboardResponse } from "../types/Dashboard";
 import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped";
 import type { LatestFailedTestsResponse } from "../types/LatestFailed";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "/api";
 
 export type EnvFilter = "qa" | "release" | "sandbox";
 
@@ -80,6 +80,21 @@ export const getAreaDailyTrend = async (
   const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/daily-trend?daysBack=${daysBack}&env=${env}`;
   const response = await fetch(url);
   return handleResponse<AreaDailyTrendResponse>(response);
+};
+
+export type AllAreasDailyTrendResponse = {
+  env: EnvFilter;
+  daysBack: number;
+  areas: Record<string, DailyTrendPoint[]>;
+};
+
+export const getAllAreasDailyTrends = async (
+  daysBack: number = 8,
+  env: EnvFilter = "qa"
+): Promise<AllAreasDailyTrendResponse> => {
+  const url = `${API_BASE_URL}/areas/daily-trends?daysBack=${daysBack}&env=${env}`;
+  const response = await fetch(url);
+  return handleResponse<AllAreasDailyTrendResponse>(response);
 };
 
 export type HealthBucket = "healthy" | "medium" | "bad" | "dead";

@@ -82,6 +82,21 @@ export const getAreaDailyTrend = async (
   return handleResponse<AreaDailyTrendResponse>(response);
 };
 
+export type AllAreasDailyTrendResponse = {
+  env: EnvFilter;
+  daysBack: number;
+  areas: Record<string, DailyTrendPoint[]>;
+};
+
+export const getAllAreasDailyTrends = async (
+  daysBack: number = 8,
+  env: EnvFilter = "qa"
+): Promise<AllAreasDailyTrendResponse> => {
+  const url = `${API_BASE_URL}/areas/daily-trends?daysBack=${daysBack}&env=${env}`;
+  const response = await fetch(url);
+  return handleResponse<AllAreasDailyTrendResponse>(response);
+};
+
 export type HealthBucket = "healthy" | "medium" | "bad" | "dead";
 
 export type HealthTestItem = {

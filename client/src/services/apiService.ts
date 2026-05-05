@@ -4,6 +4,7 @@ import type { AreaHealthResponse, EnvHealthResponse } from "../types/Health";
 import type { AreasDashboardResponse } from "../types/Dashboard";
 import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped";
 import type { LatestFailedTestsResponse } from "../types/LatestFailed";
+import type { CommonFailuresResponse } from "../types/CommonFailures";
 
 const API_BASE_URL = "/api";
 
@@ -143,4 +144,12 @@ export const getAreaLatestFailedTests = async (
   const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/latest-failed-tests?env=${env}`;
   const response = await fetch(url);
   return handleResponse<LatestFailedTestsResponse>(response);
+};
+
+export const getCommonFailures = async (
+  env: EnvFilter = "qa"
+): Promise<CommonFailuresResponse> => {
+  const url = `${API_BASE_URL}/common-failures?env=${env}`;
+  const response = await fetch(url);
+  return handleResponse<CommonFailuresResponse>(response);
 };

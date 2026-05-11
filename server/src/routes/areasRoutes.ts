@@ -9,6 +9,7 @@ import { getAreaHealthTestsHandler } from "../controllers/areaHealthTestsControl
 import { getAreaDailyTrendHandler } from "../controllers/areaDailyTrendController";
 import { getAreaLatestFailedHandler } from "../controllers/areaLatestFailedController";
 import { getAllAreasDailyTrendHandler } from "../controllers/allAreasDailyTrendController";
+import { getTestHistoryHandler } from "../controllers/testHistoryController";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.get("/:areaName/recent-failures-grouped", getAreaRecentFailuresGroupedHan
 router.get("/:areaName/health-tests", getAreaHealthTestsHandler);
 router.get("/:areaName/daily-trend", getAreaDailyTrendHandler);
 router.get("/:areaName/latest-failed-tests", getAreaLatestFailedHandler);
+router.get("/:areaName/tests/:testName/history", getTestHistoryHandler);
 
 export default router;

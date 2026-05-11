@@ -15,6 +15,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import BrokenImageIcon from "@mui/icons-material/BrokenImage";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import HistoryIcon from "@mui/icons-material/History";
 import { getAreaRecentFailuresGrouped, getAreaLatestFailedTests } from "../services/apiService";
 import type { EnvFilter } from "../services/apiService";
 import type {
@@ -71,10 +72,14 @@ function dateOnly(value: string | null | undefined): string | null {
   return value.split("T")[0].split(" ")[0];
 }
 
+function buildTestHistoryPath(areaName: string, testName: string, env: EnvFilter): string {
+  return `/area/${encodeURIComponent(areaName)}/test/${encodeURIComponent(testName)}/history?env=${env}`;
+}
+
 function severityColor(count: number): string {
   if (count >= 10) return "#dc2626";
-  if (count >= 5)  return "#ea580c";
-  if (count >= 3)  return "#f59e0b";
+  if (count >= 5) return "#ea580c";
+  if (count >= 3) return "#f59e0b";
   return "#ef4444";
 }
 
@@ -250,8 +255,10 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onEx
           size="small" variant="outlined"
           startIcon={<TerminalIcon sx={{ fontSize: "13px !important" }} />}
           onClick={() => onExpandLog(truncateLogToTestScope(reason.text, testName), label)}
-          sx={{ borderColor: "#334155", color: "#94a3b8", fontSize: 11, textTransform: "none", py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
-            "&:hover": { borderColor: "#64748b", color: "#e2e8f0", bgcolor: "#1e293b" } }}
+          sx={{
+            borderColor: "#334155", color: "#94a3b8", fontSize: 11, textTransform: "none", py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
+            "&:hover": { borderColor: "#64748b", color: "#e2e8f0", bgcolor: "#1e293b" }
+          }}
         >
           Expand Log
         </Button>
@@ -260,8 +267,10 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onEx
             size="small" variant="outlined"
             startIcon={<OpenInNewIcon sx={{ fontSize: "12px !important" }} />}
             href={reason.logLink} target="_blank" rel="noopener noreferrer"
-            sx={{ borderColor: "#e2e8f0", color: "#64748b", fontSize: 11, textTransform: "none", py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
-              "&:hover": { borderColor: "#94a3b8", color: "#1e293b", bgcolor: "#f8fafc" } }}
+            sx={{
+              borderColor: "#e2e8f0", color: "#64748b", fontSize: 11, textTransform: "none", py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
+              "&:hover": { borderColor: "#94a3b8", color: "#1e293b", bgcolor: "#f8fafc" }
+            }}
           >
             Full Log
           </Button>
@@ -278,9 +287,10 @@ interface FailureCardProps {
   index: number;
   onImageClick: (src: string) => void;
   onExpandLog: (lines: string[], testName: string, label: string) => void;
+  onOpenHistory: () => void;
 }
 
-const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog }) => {
+const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = item.reasons[0] ?? null;
   const extra = item.reasons.slice(1, 3);
@@ -348,6 +358,29 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
           </Box>
         )}
 
+        {/* Action button group */}
+        <Box sx={{ display: "flex", gap: 0.875, flexWrap: "wrap", pt: 0.5 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<HistoryIcon sx={{ fontSize: "13px !important" }} />}
+            onClick={onOpenHistory}
+            sx={{
+              borderColor: "#cbd5e1",
+              color: "#475569",
+              fontSize: 11,
+              textTransform: "none",
+              py: "3px",
+              px: "10px",
+              minHeight: 0,
+              lineHeight: 1.4,
+              "&:hover": { borderColor: "#94a3b8", bgcolor: "#fff", color: "#0f172a" },
+            }}
+          >
+            History
+          </Button>
+        </Box>
+
         {/* Additional reasons */}
         {extra.length > 0 && (
           <Box>
@@ -355,8 +388,10 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
               size="small" variant="outlined"
               onClick={() => setMoreOpen(o => !o)}
               endIcon={<KeyboardArrowDownIcon sx={{ fontSize: "16px !important", transition: "transform 0.25s ease", transform: moreOpen ? "rotate(180deg)" : "rotate(0deg)" }} />}
-              sx={{ borderColor: "#e2e8f0", color: "#64748b", fontSize: 12, textTransform: "none", py: "4px", px: 1.5, minHeight: 0,
-                "&:hover": { borderColor: "#cbd5e1", bgcolor: "#f8fafc", color: "#475569" } }}
+              sx={{
+                borderColor: "#e2e8f0", color: "#64748b", fontSize: 12, textTransform: "none", py: "4px", px: 1.5, minHeight: 0,
+                "&:hover": { borderColor: "#cbd5e1", bgcolor: "#f8fafc", color: "#475569" }
+              }}
             >
               {moreOpen ? "Hide additional reasons" : `${extra.length} more reason${extra.length > 1 ? "s" : ""}`}
             </Button>
@@ -422,9 +457,10 @@ interface LatestFailedViewProps {
   search: string;
   onImageClick: (src: string) => void;
   onExpandLog: (lines: string[], testName: string, label: string) => void;
+  onOpenHistory: (testName: string) => void;
 }
 
-const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog }) => {
+const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog, onOpenHistory }) => {
   const [openTestName, setOpenTestName] = useState<string | null>(null);
 
   const handleRowClick = (testName: string) => {
@@ -434,13 +470,13 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
   const q = search.trim().toLowerCase();
   const filteredServers = q
     ? data.servers
-        .map(sg => ({
-          ...sg,
-          tests: sg.tests.filter(t =>
-            t.testName.toLowerCase().includes(q) || t.server.toLowerCase().includes(q)
-          ),
-        }))
-        .filter(sg => sg.tests.length > 0)
+      .map(sg => ({
+        ...sg,
+        tests: sg.tests.filter(t =>
+          t.testName.toLowerCase().includes(q) || t.server.toLowerCase().includes(q)
+        ),
+      }))
+      .filter(sg => sg.tests.length > 0)
     : data.servers;
 
   if (data.servers.length === 0) {
@@ -501,6 +537,28 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                     <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "#0f172a", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
                       {test.testName}
                     </Typography>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<HistoryIcon sx={{ fontSize: "13px !important" }} />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenHistory(test.testName);
+                      }}
+                      sx={{
+                        borderColor: "#cbd5e1",
+                        color: "#475569",
+                        textTransform: "none",
+                        fontSize: 11,
+                        py: "3px",
+                        px: "10px",
+                        minHeight: 0,
+                        lineHeight: 1.4,
+                        "&:hover": { borderColor: "#94a3b8", bgcolor: "#fff", color: "#0f172a" },
+                      }}
+                    >
+                      History
+                    </Button>
                     <KeyboardArrowDownIcon sx={{
                       fontSize: 18, color: isOpen ? "#dc2626" : "#94a3b8", flexShrink: 0,
                       transition: "transform 0.22s ease",
@@ -519,6 +577,7 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                         index={0}
                         onImageClick={onImageClick}
                         onExpandLog={onExpandLog}
+                        onOpenHistory={() => onOpenHistory(test.testName)}
                       />
                     </Box>
                   </Collapse>
@@ -555,6 +614,21 @@ const RecentFailuresPage: React.FC = () => {
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
+
+  const openTestHistory = (testName: string) => {
+    if (!areaName) return;
+    sessionStorage.setItem('recentFailuresTab', 'from-recent-failures');
+    sessionStorage.setItem('recentFailuresViewTab', String(activeTab));
+    navigate(buildTestHistoryPath(areaName, testName, env));
+  };
+
+  // Restore tab state from URL query parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === '0' || tabParam === '1') {
+      setActiveTab(Number(tabParam) as 0 | 1);
+    }
+  }, []);
 
   useEffect(() => {
     if (!areaName) return;
@@ -734,6 +808,7 @@ const RecentFailuresPage: React.FC = () => {
                       index={i}
                       onImageClick={setImageSrc}
                       onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
+                      onOpenHistory={() => openTestHistory(item.testName)}
                     />
                   ))}
                 </Box>
@@ -757,6 +832,7 @@ const RecentFailuresPage: React.FC = () => {
                 search={search}
                 onImageClick={setImageSrc}
                 onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
+                onOpenHistory={openTestHistory}
               />
             )}
           </>

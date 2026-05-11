@@ -5,6 +5,7 @@ import type { AreasDashboardResponse } from "../types/Dashboard";
 import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped";
 import type { LatestFailedTestsResponse } from "../types/LatestFailed";
 import type { CommonFailuresResponse } from "../types/CommonFailures";
+import type { TestSearchResult } from "../types/TestSearch";
 
 const API_BASE_URL = "/api";
 
@@ -152,4 +153,25 @@ export const getCommonFailures = async (
   const url = `${API_BASE_URL}/common-failures?env=${env}`;
   const response = await fetch(url);
   return handleResponse<CommonFailuresResponse>(response);
+};
+
+export const searchTests = async (
+  query: string,
+  env: EnvFilter = "qa",
+  limit: number = 10
+): Promise<TestSearchResult[]> => {
+  const url = `${API_BASE_URL}/test-results?q=${encodeURIComponent(query)}&env=${env}&limit=${limit}`;
+  const response = await fetch(url);
+  return handleResponse<TestSearchResult[]>(response);
+};
+
+export const getTestHistory = async (
+  areaName: string,
+  testName: string,
+  env: EnvFilter = "qa",
+  daysBack: number = 30
+): Promise<import("../types/TestHistory").TestHistoryResponse> => {
+  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/tests/${encodeURIComponent(testName)}/history?env=${env}&daysBack=${daysBack}`;
+  const response = await fetch(url);
+  return handleResponse(response);
 };

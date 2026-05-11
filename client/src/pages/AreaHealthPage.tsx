@@ -8,31 +8,36 @@ import {
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
+import HistoryIcon from "@mui/icons-material/History";
 import { getAreaHealthTests, type HealthBucket, type HealthTestItem } from "../services/apiService";
 
 const BUCKET_COLOR: Record<HealthBucket, string> = {
   healthy: "#2e7d32",
-  medium:  "#ed6c02",
-  bad:     "#c62828",
-  dead:    "#757575",
+  medium: "#ed6c02",
+  bad: "#c62828",
+  dead: "#757575",
 };
 
 const BUCKET_BG: Record<HealthBucket, string> = {
   healthy: "#f0fdf4",
-  medium:  "#fff7ed",
-  bad:     "#fef2f2",
-  dead:    "#f5f5f5",
+  medium: "#fff7ed",
+  bad: "#fef2f2",
+  dead: "#f5f5f5",
 };
 
 const BUCKET_BORDER: Record<HealthBucket, string> = {
   healthy: "#bbf7d0",
-  medium:  "#fed7aa",
-  bad:     "#fecaca",
-  dead:    "#e0e0e0",
+  medium: "#fed7aa",
+  bad: "#fecaca",
+  dead: "#e0e0e0",
 };
 
 const isValidBucket = (b: string | undefined): b is HealthBucket =>
   b === "healthy" || b === "medium" || b === "bad" || b === "dead";
+
+function buildTestHistoryPath(areaName: string, testName: string, env: string): string {
+  return `/area/${encodeURIComponent(areaName)}/test/${encodeURIComponent(testName)}/history?env=${env}`;
+}
 
 const AreaHealthPage: React.FC = () => {
   const { areaName, bucket } = useParams<{ areaName: string; bucket: string }>();
@@ -71,11 +76,11 @@ const AreaHealthPage: React.FC = () => {
     );
   }
 
-  const color  = BUCKET_COLOR[bucket];
-  const bg     = BUCKET_BG[bucket];
+  const color = BUCKET_COLOR[bucket];
+  const bg = BUCKET_BG[bucket];
   const border = BUCKET_BORDER[bucket];
-  const label  = bucket.charAt(0).toUpperCase() + bucket.slice(1);
-
+  const label = bucket.charAt(0).toUpperCase() + bucket.slice(1);
+  const openTestHistory = (testName: string) => navigate(buildTestHistoryPath(areaName ?? "", testName, env));
   const filtered = search.trim()
     ? tests.filter(t => t.testName.toLowerCase().includes(search.toLowerCase()))
     : tests;
@@ -171,7 +176,7 @@ const AreaHealthPage: React.FC = () => {
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: "#f8fafc" }}>
-                    {["Test Name", "Pass Rate", "Successes", "Failures", "Last Run"].map((h, i) => (
+                    {["Test Name", "Pass Rate", "Successes", "Failures", "Last Run", "History"].map((h, i) => (
                       <TableCell
                         key={h}
                         align={i === 0 ? "left" : "center"}
@@ -185,7 +190,7 @@ const AreaHealthPage: React.FC = () => {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 5, color: "#94a3b8" }}>
+                      <TableCell colSpan={6} align="center" sx={{ py: 5, color: "#94a3b8" }}>
                         No tests found
                       </TableCell>
                     </TableRow>
@@ -220,6 +225,25 @@ const AreaHealthPage: React.FC = () => {
                         </TableCell>
                         <TableCell align="center" sx={{ fontSize: 12, color: "#94a3b8" }}>
                           {t.lastRunDate}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<HistoryIcon sx={{ fontSize: 14 }} />}
+                            onClick={() => openTestHistory(t.testName)}
+                            sx={{
+                              borderColor: "#e2e8f0",
+                              color: "#475569",
+                              textTransform: "none",
+                              fontSize: 11,
+                              px: 1.25,
+                              py: 0.5,
+                              "&:hover": { borderColor: "#cbd5e1", bgcolor: "#f8fafc", color: "#0f172a" },
+                            }}
+                          >
+                            History
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

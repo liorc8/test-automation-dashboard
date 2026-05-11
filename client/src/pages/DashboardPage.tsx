@@ -1,14 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Container, Typography, Box, Alert, CircularProgress, Divider, Button } from "@mui/material";
+import {
+  Container,
+  Typography,
+  Box,
+  Alert,
+  CircularProgress,
+  Divider,
+  Button,
+  Paper,
+  TextField,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemText,
+  Chip,
+  Skeleton,
+} from "@mui/material";
 import Grid from "@mui/material/Grid";
+import SearchIcon from "@mui/icons-material/Search";
 
 import AreaCard from "../components/AreaCard";
 import EnvToggle from "../components/EnvToggle";
 import { useFavorites } from "../hooks/useFavorites";
-import { getAreas, getAreasDashboard, getAllAreasDailyTrends, type EnvFilter, type DailyTrendPoint } from "../services/apiService";
+import {
+  getAreas,
+  getAreasDashboard,
+  getAllAreasDailyTrends,
+  searchTests,
+  type EnvFilter,
+  type DailyTrendPoint,
+} from "../services/apiService";
 import type { AreaItem } from "../types/Area";
 import type { AreasDashboardResponse, HealthBuckets } from "../types/Dashboard";
+import type { TestSearchResult } from "../types/TestSearch";
 
 type AreaCardVM = {
   id: string;
@@ -30,10 +55,18 @@ const DashboardPage: React.FC = () => {
   const [env, setEnv] = useState<EnvFilter>(
     () => (localStorage.getItem("selectedEnv") as EnvFilter) ?? "qa"
   );
+  const [testQuery, setTestQuery] = useState("");
+  const [testResults, setTestResults] = useState<TestSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   const handleEnvChange = (e: EnvFilter) => {
     setEnv(e);
     localStorage.setItem("selectedEnv", e);
+  };
+
+  const openTestHistory = (area: string, testName: string) => {
+    navigate(`/area/${encodeURIComponent(area)}/test/${encodeURIComponent(testName)}/history?env=${env}`);
   };
 
   useEffect(() => {
@@ -84,6 +117,31 @@ const DashboardPage: React.FC = () => {
 
     load();
   }, [env]);
+
+  useEffect(() => {
+    const query = testQuery.trim();
+    if (query.length < 2) {
+      setTestResults([]);
+      setSearchLoading(false);
+      setSearchError("");
+      return;
+    }
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        setSearchError("");
+        const results = await searchTests(query, env, 8);
+        setTestResults(results);
+      } catch (e) {
+        setSearchError(e instanceof Error ? e.message : "Failed to search tests");
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [testQuery, env]);
 
   return (
     <Container maxWidth={false} disableGutters sx={{ px: 3, py: 3 }}>
@@ -146,6 +204,88 @@ const DashboardPage: React.FC = () => {
         <Box sx={{ flex: 1 }} />
 
       </Box>
+
+      <Paper
+        variant="outlined"
+        sx={{
+          mb: 4,
+          borderRadius: 3,
+          overflow: "hidden",
+          background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+        }}
+      >
+        <Box sx={{ p: 2.5, display: "flex", flexDirection: "column", gap: 1.75 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+            <Box sx={{ width: 42, height: 42, borderRadius: 2, display: "grid", placeItems: "center", bgcolor: "#eff6ff", color: "#1d4ed8" }}>
+              <SearchIcon />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                size="small"
+                fullWidth
+                value={testQuery}
+                onChange={(e) => setTestQuery(e.target.value)}
+                placeholder="Search tests across all areas…"
+                sx={{
+                  maxWidth: 420,
+                  "& .MuiOutlinedInput-root": {
+                    bgcolor: "#f8fafc",
+                    borderRadius: 2,
+                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#cbd5e1" },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#3b82f6" },
+                  },
+                  "& .MuiOutlinedInput-input::placeholder": { opacity: 0.6 },
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ fontSize: 18, color: "#94a3b8" }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+          </Box>
+
+          {testQuery.trim().length >= 2 && (
+            <Box>
+              {searchLoading && (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} variant="rounded" height={54} />
+                  ))}
+                </Box>
+              )}
+
+              {!searchLoading && searchError && <Alert severity="error">{searchError}</Alert>}
+
+              {!searchLoading && !searchError && testResults.length === 0 && (
+                <Alert severity="info">No matching tests found.</Alert>
+              )}
+
+              {!searchLoading && !searchError && testResults.length > 0 && (
+                <List disablePadding sx={{ border: "1px solid #e2e8f0", borderRadius: 2.5, overflow: "hidden", bgcolor: "#fff" }}>
+                  {testResults.map((result) => (
+                    <ListItemButton
+                      key={`${result.area}-${result.testName}`}
+                      onClick={() => openTestHistory(result.area, result.testName)}
+                      sx={{ py: 1.35, px: 2, borderBottom: "1px solid #f1f5f9", "&:last-child": { borderBottom: 0 } }}
+                    >
+                      <ListItemText
+                        primary={result.testName}
+                        primaryTypographyProps={{
+                          sx: { fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13.5, fontWeight: 700, color: "#0f172a" },
+                        }}
+                      />
+                      <Chip label={result.area} size="small" variant="outlined" sx={{ borderColor: "#cbd5e1", color: "#475569", fontWeight: 700, ml: 1 }} />
+                    </ListItemButton>
+                  ))}
+                </List>
+              )}
+            </Box>
+          )}
+        </Box>
+      </Paper>
 
       {loading && (
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>

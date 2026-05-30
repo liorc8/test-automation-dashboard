@@ -2,17 +2,8 @@ import oracledb from "oracledb";
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
-try {
-  oracledb.initOracleClient({
-    libDir:
-      process.env.ORACLE_CLIENT_LIB_DIR ??
-      "C:\\oracle\\instantclient_21_1\\instantclient_23_0",
-  });
-} catch (err) {
-  console.error("⚠️ Failed to initialize Thick Mode.", err);
-}
-
 let pool: oracledb.Pool | null = null;
+let thickModeInitialized = false;
 
 function getDbConfig() {
   const user = process.env.DB_USER;
@@ -30,6 +21,20 @@ function getDbConfig() {
 
 async function getPool(): Promise<oracledb.Pool> {
   if (pool) return pool;
+
+  if (!thickModeInitialized) {
+    thickModeInitialized = true;
+    const libDir = process.env.ORACLE_CLIENT_LIB_DIR;
+    if (libDir) {
+      try {
+        oracledb.initOracleClient({ libDir });
+      } catch (err) {
+        console.error("⚠️ Failed to initialize Thick Mode.", err);
+      }
+    } else {
+      console.warn("⚠️ ORACLE_CLIENT_LIB_DIR not set — running in Thin mode.");
+    }
+  }
 
   const dbConfig = getDbConfig();
 

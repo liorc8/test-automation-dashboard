@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    allowedHosts: [
+      'il-almaqa-dashboard01.corp.exlibrisgroup.com'
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:5000',

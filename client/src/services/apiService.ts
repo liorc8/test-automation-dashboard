@@ -108,6 +108,8 @@ export type HealthTestItem = {
   fails: number;
   lastRunDate: string;
   lastPassed: boolean;
+  lastSuccess: string;
+  lastFailure: string;
 };
 
 export type AreaHealthTestsResponse = {

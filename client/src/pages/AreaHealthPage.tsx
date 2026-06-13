@@ -12,6 +12,7 @@ import SearchInput from "../components/SearchInput";
 import FailureCard, { latestFailedToGroupedItem } from "../components/FailureCard";
 import ImageModal from "../components/ImageModal";
 import LogModal from "../components/LogModal";
+import ThemeToggle from "../components/ThemeToggle";
 import { useTestRailIds } from "../hooks/useTestRailIds";
 import {
   getAreaHealthTests, getAreaLatestFailedTests,
@@ -141,7 +142,7 @@ const AreaHealthPage: React.FC = () => {
     : tests;
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       {imageSrc && <ImageModal src={imageSrc} onClose={() => setImageSrc(null)} />}
       {logModal && (
         <LogModal lines={logModal.lines} testName={logModal.testName} reasonLabel={logModal.label}
@@ -150,7 +151,7 @@ const AreaHealthPage: React.FC = () => {
 
       {/* ── Sticky header ── */}
       <Box component="header" sx={{
-        bgcolor: "#fff", borderBottom: "1px solid #e5e7eb",
+        bgcolor: "background.paper", borderBottom: 1, borderColor: "divider",
         px: 4, py: 1.75,
         display: "flex", alignItems: "center", gap: 2,
         position: "sticky", top: 0, zIndex: 100,
@@ -161,14 +162,14 @@ const AreaHealthPage: React.FC = () => {
           size="small"
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/")}
-          sx={{ borderColor: "#e2e8f0", color: "#64748b", textTransform: "none", "&:hover": { borderColor: "#cbd5e1" } }}
+          sx={{ borderColor: "#e2e8f0", color: "text.secondary", textTransform: "none", "&:hover": { borderColor: "#cbd5e1" } }}
         >
           Dashboard
         </Button>
 
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-            <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 18, fontWeight: 800, color: "#1e293b" }}>
+            <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 18, fontWeight: 800, color: "text.primary" }}>
               {areaName}
             </Typography>
             <Box component="span" sx={{ bgcolor: bg, border: `1px solid ${border}`, color, borderRadius: 20, px: 1.5, py: "2px", fontSize: 12, fontWeight: 700 }}>
@@ -186,6 +187,7 @@ const AreaHealthPage: React.FC = () => {
             <Typography sx={{ fontSize: 11, color }}>{label.toLowerCase()} tests</Typography>
           </Box>
         )}
+        <ThemeToggle />
       </Box>
 
       {/* ── Content ── */}
@@ -213,7 +215,7 @@ const AreaHealthPage: React.FC = () => {
               <SearchInput
                 value={search}
                 onChange={setSearch}
-                sx={{ maxWidth: 480, flex: 1, "& .MuiOutlinedInput-root": { bgcolor: "#fff" } }}
+                sx={{ maxWidth: 480, flex: 1 }}
               />
               <Typography variant="body2" sx={{ color: "#94a3b8" }}>{filtered.length} results</Typography>
             </Box>
@@ -226,7 +228,7 @@ const AreaHealthPage: React.FC = () => {
             >
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "#f8fafc" }}>
+                  <TableRow sx={{ bgcolor: "background.default" }}>
                     {COLUMNS.map((h, i) => (
                       <TableCell
                         key={h}
@@ -255,12 +257,12 @@ const AreaHealthPage: React.FC = () => {
                             onClick={() => handleRowClick(t.testName)}
                             sx={{
                               cursor: "pointer",
-                              bgcolor: isOpen ? "#f8fafc" : "transparent",
-                              "&:hover": { bgcolor: "#f8fafc" },
+                              bgcolor: isOpen ? "action.hover" : "transparent",
+                              "&:hover": { bgcolor: "action.hover" },
                               "& td": { borderBottom: isOpen ? "none" : undefined },
                             }}
                           >
-                            <TableCell sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "#1e293b", wordBreak: "break-all" }}>
+                            <TableCell sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", wordBreak: "break-all" }}>
                               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                 <KeyboardArrowDownIcon sx={{
                                   fontSize: 18, color: isOpen ? "#475569" : "#cbd5e1", flexShrink: 0,
@@ -290,10 +292,10 @@ const AreaHealthPage: React.FC = () => {
                             <TableCell align="center" sx={{ color: "#c62828", fontWeight: 600, fontSize: 13 }}>
                               {t.fails}
                             </TableCell>
-                            <TableCell align="center" sx={{ fontSize: 12, color: "#64748b" }}>
+                            <TableCell align="center" sx={{ fontSize: 12, color: "text.secondary" }}>
                               {t.lastSuccess || "—"}
                             </TableCell>
-                            <TableCell align="center" sx={{ fontSize: 12, color: "#64748b" }}>
+                            <TableCell align="center" sx={{ fontSize: 12, color: "text.secondary" }}>
                               {t.lastFailure || "—"}
                             </TableCell>
                             <TableCell align="center">
@@ -319,11 +321,11 @@ const AreaHealthPage: React.FC = () => {
                           <TableRow>
                             <TableCell colSpan={COLUMNS.length} sx={{ p: 0, borderBottom: isOpen ? "1px solid #e2e8f0" : "none" }}>
                               <Collapse in={isOpen} unmountOnExit>
-                                <Box sx={{ p: 2, bgcolor: "#f8fafc" }}>
+                                <Box sx={{ p: 2, bgcolor: "background.default" }}>
                                   {latestLoading && (
                                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 2 }}>
                                       <CircularProgress size={18} />
-                                      <Typography variant="body2" sx={{ color: "#64748b" }}>Loading failure details…</Typography>
+                                      <Typography variant="body2" sx={{ color: "text.secondary" }}>Loading failure details…</Typography>
                                     </Box>
                                   )}
                                   {!latestLoading && failure && (

@@ -1,13 +1,17 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import Chip from "@mui/material/Chip";
-import Collapse from "@mui/material/Collapse";
+import {
+  Box, Typography, Button, Chip, Collapse, Paper, Alert, CircularProgress,
+} from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import BrokenImageIcon from "@mui/icons-material/BrokenImage";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 
 import EnvToggle from "../components/EnvToggle";
+import ThemeToggle from "../components/ThemeToggle";
+import ImageModal from "../components/ImageModal";
 import { getCommonFailures, type EnvFilter } from "../services/apiService";
 import type { CommonFailureCluster } from "../types/CommonFailures";
 
@@ -36,7 +40,7 @@ function renderPreviewLines(lines: string[]) {
   return lines.map((line, i) => {
     const isFatal = line.toUpperCase().includes("FATAL");
     return (
-      <div key={i} style={{
+      <Box key={i} sx={{
         display: "block",
         background: isFatal ? "rgba(239,68,68,0.15)" : "transparent",
         color: isFatal ? "#fca5a5" : "#cbd5e1",
@@ -45,36 +49,11 @@ function renderPreviewLines(lines: string[]) {
         padding: "1px 8px",
         lineHeight: 1.55,
       }}>
-        {line || "\u00A0"}
-      </div>
+        {line || " "}
+      </Box>
     );
   });
 }
-
-// ─── Image modal ──────────────────────────────────────────────────────────────
-
-const ImageModal: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
-  <div onClick={onClose} style={{
-    position: "fixed", inset: 0, zIndex: 1300,
-    background: "rgba(0,0,0,0.9)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    cursor: "zoom-out",
-  }}>
-    <div onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
-      <img src={src} alt="failure screenshot" style={{
-        maxWidth: "92vw", maxHeight: "92vh",
-        borderRadius: 8, boxShadow: "0 28px 64px rgba(0,0,0,0.7)",
-      }} />
-      <button onClick={onClose} style={{
-        position: "absolute", top: -14, right: -14,
-        background: "#ef4444", border: "none", borderRadius: "50%",
-        width: 30, height: 30, color: "#fff", fontSize: 17,
-        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-      }}>×</button>
-    </div>
-  </div>
-);
 
 // ─── Screenshot thumbnail ─────────────────────────────────────────────────────
 
@@ -90,24 +69,24 @@ const ScreenshotThumbnail: React.FC<ScreenshotThumbnailProps> = ({ src, onClick 
 
   if (missing) {
     return (
-      <div style={{
+      <Box sx={{
         width: 220, flexShrink: 0, alignSelf: "stretch",
         display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: 8,
-        background: "#f8fafc", borderRight: "1px solid #e2e8f0",
+        alignItems: "center", justifyContent: "center", gap: 1,
+        bgcolor: "background.default", borderRight: 1, borderColor: "divider",
         borderRadius: "10px 0 0 0",
       }}>
-        <BrokenImageIcon sx={{ fontSize: 32, color: "#cbd5e1" }} />
-        <span style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", lineHeight: 1.4, padding: "0 12px" }}>
+        <BrokenImageIcon sx={{ fontSize: 32, color: "text.disabled" }} />
+        <Typography sx={{ fontSize: 11, color: "text.secondary", textAlign: "center", lineHeight: 1.4, px: 1.5 }}>
           No screenshot
-        </span>
-      </div>
+        </Typography>
+      </Box>
     );
   }
 
   return (
-    <div
-      style={{
+    <Box
+      sx={{
         width: 220, flexShrink: 0, alignSelf: "stretch",
         position: "relative", overflow: "hidden",
         background: "#0f172a",
@@ -115,12 +94,12 @@ const ScreenshotThumbnail: React.FC<ScreenshotThumbnailProps> = ({ src, onClick 
         borderRadius: "10px 0 0 0",
         cursor: "zoom-in",
       }}
-      onClick={() => onClick(src)}
+      onClick={() => onClick(src!)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <img
-        src={src}
+        src={src!}
         alt="failure screenshot"
         onError={() => setErrored(true)}
         style={{
@@ -131,8 +110,7 @@ const ScreenshotThumbnail: React.FC<ScreenshotThumbnailProps> = ({ src, onClick 
           transform: hovered ? "scale(1.06)" : "scale(1)",
         }}
       />
-      {/* Zoom overlay */}
-      <div style={{
+      <Box sx={{
         position: "absolute", inset: 0,
         background: "rgba(15,23,42,0.52)",
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -141,9 +119,8 @@ const ScreenshotThumbnail: React.FC<ScreenshotThumbnailProps> = ({ src, onClick 
         pointerEvents: "none",
       }}>
         <ZoomInIcon sx={{ fontSize: 32, color: "#fff" }} />
-      </div>
-      {/* "Click to zoom" label at bottom */}
-      <div style={{
+      </Box>
+      <Box sx={{
         position: "absolute", bottom: 0, left: 0, right: 0,
         background: "linear-gradient(transparent, rgba(15,23,42,0.85))",
         padding: "16px 8px 6px",
@@ -153,8 +130,8 @@ const ScreenshotThumbnail: React.FC<ScreenshotThumbnailProps> = ({ src, onClick 
         pointerEvents: "none",
       }}>
         Click to zoom
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };
 
@@ -168,189 +145,155 @@ interface ClusterCardProps {
 
 const ClusterCard: React.FC<ClusterCardProps> = ({ cluster, index, onImageClick }) => {
   const [expanded, setExpanded] = useState(false);
-  const [cardHovered, setCardHovered] = useState(false);
   const color = severityColor(cluster.occurrenceCount);
   const previewLines = extractPreviewLines(cluster.failureText);
 
-  // Pick the first screenshot available across examples
   const screenshotSrc =
     cluster.examples.find(ex => ex.screenshotLink)?.screenshotLink ?? null;
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 12,
-        border: "1px solid #e2e8f0",
+    <Paper
+      variant="outlined"
+      sx={{
+        borderRadius: 3,
         borderTop: `3px solid ${color}`,
-        boxShadow: cardHovered
-          ? "0 8px 28px rgba(0,0,0,0.13)"
-          : "0 1px 4px rgba(0,0,0,0.07)",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
         transition: "box-shadow 0.2s ease, transform 0.2s ease",
-        transform: cardHovered ? "translateY(-2px)" : "translateY(0)",
+        "&:hover": { boxShadow: "0 8px 28px rgba(0,0,0,0.13)", transform: "translateY(-2px)" },
         overflow: "hidden",
         display: "flex",
         flexDirection: "row",
       }}
-      onMouseEnter={() => setCardHovered(true)}
-      onMouseLeave={() => setCardHovered(false)}
     >
       {/* Screenshot panel — left column */}
       <ScreenshotThumbnail src={screenshotSrc} onClick={onImageClick} />
 
-      {/* Right column: all existing card content */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+      {/* Right column */}
+      <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
 
-      {/* Card header */}
-      <div style={{ padding: "18px 24px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* Card header */}
+        <Box sx={{ p: "18px 24px 14px", display: "flex", flexDirection: "column", gap: 1.5 }}>
 
-        {/* Top row: index + count badge + areas */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{
-            background: "#f1f5f9", color: "#64748b", borderRadius: 6,
-            padding: "2px 8px", fontSize: 11, fontWeight: 700,
-            flexShrink: 0, lineHeight: 1.5,
-          }}>#{index + 1}</span>
+          {/* Top row */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap" }}>
+            <Box component="span" sx={{
+              bgcolor: "action.hover", color: "text.secondary", borderRadius: "6px",
+              px: 1, py: "2px", fontSize: 11, fontWeight: 700, flexShrink: 0, lineHeight: 1.5,
+            }}>#{index + 1}</Box>
 
-          <span style={{
-            background: color, color: "#fff", borderRadius: 20,
-            padding: "3px 12px", fontSize: 12, fontWeight: 700,
-            flexShrink: 0, whiteSpace: "nowrap", lineHeight: 1.6,
-          }}>
-            {cluster.occurrenceCount} occurrences
-          </span>
-
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginLeft: 4 }}>
-            {cluster.affectedAreas.map(area => (
-              <Chip
-                key={area}
-                label={area}
-                size="small"
-                variant="outlined"
-                sx={{ fontSize: 10, height: 20, borderColor: "#e2e8f0", color: "#475569" }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Failure text preview */}
-        <div style={{
-          background: "#0f172a", borderRadius: 8,
-          border: "1px solid #1e293b", overflow: "hidden",
-        }}>
-          <div style={{ maxHeight: 130, overflowY: "auto", padding: "6px 0" }}>
-            <div style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace", fontSize: 11 }}>
-              {renderPreviewLines(previewLines)}
-            </div>
-          </div>
-        </div>
-
-        {/* Expand toggle */}
-        <button
-          onClick={() => setExpanded(o => !o)}
-          style={{
-            display: "flex", alignItems: "center", gap: 5,
-            alignSelf: "flex-start",
-            background: "none", border: "1px solid #e2e8f0",
-            borderRadius: 8, padding: "5px 12px",
-            cursor: "pointer", fontSize: 12, color: "#64748b",
-            transition: "border-color 0.15s, color 0.15s",
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = "#cbd5e1";
-            e.currentTarget.style.color = "#475569";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = "#e2e8f0";
-            e.currentTarget.style.color = "#64748b";
-          }}
-        >
-          {expanded ? "Hide details" : `Show details · ${cluster.examples.length} example${cluster.examples.length !== 1 ? "s" : ""}`}
-          <KeyboardArrowDownIcon sx={{
-            fontSize: 16, color: "inherit",
-            transition: "transform 0.22s ease",
-            transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-          }} />
-        </button>
-      </div>
-
-      {/* Expanded section */}
-      <Collapse in={expanded} unmountOnExit>
-        <div style={{
-          borderTop: "1px solid #f1f5f9",
-          padding: "16px 24px 20px",
-          background: "#f8fafc",
-          display: "flex", flexDirection: "column", gap: 16,
-        }}>
-          {/* Example tests */}
-          <div>
-            <div style={{
-              fontSize: 10, fontWeight: 700, color: "#94a3b8",
-              textTransform: "uppercase", letterSpacing: "0.07em",
-              marginBottom: 7,
+            <Box component="span" sx={{
+              bgcolor: color, color: "#fff", borderRadius: 20,
+              px: 1.5, py: "3px", fontSize: 12, fontWeight: 700,
+              flexShrink: 0, whiteSpace: "nowrap", lineHeight: 1.6,
             }}>
-              Example Tests
-            </div>
-            <div style={{
-              background: "#fff", border: "1px solid #e2e8f0",
-              borderRadius: 8, overflow: "hidden",
-            }}>
-              {cluster.examples.map((ex, i) => (
-                <div key={i} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 16px",
-                  borderBottom: i < cluster.examples.length - 1 ? "1px solid #f1f5f9" : "none",
-                }}>
-                  <span style={{
-                    background: "#f1f5f9", color: "#475569",
-                    borderRadius: 4, padding: "2px 7px",
-                    fontSize: 10, fontWeight: 700,
-                    flexShrink: 0, letterSpacing: "0.04em",
-                    border: "1px solid #e2e8f0",
-                  }}>{ex.area}</span>
+              {cluster.occurrenceCount} occurrences
+            </Box>
 
-                  <span style={{
-                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                    fontSize: 12, color: "#0f172a",
-                    flex: 1, minWidth: 0, wordBreak: "break-all",
-                  }}>
-                    {ex.testName}
-                  </span>
-
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                    {ex.logLink && (
-                      <a
-                        href={ex.logLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#64748b", textDecoration: "none" }}
-                        onMouseEnter={e => (e.currentTarget.style.color = "#0f172a")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "#64748b")}
-                      >
-                        <OpenInNewIcon sx={{ fontSize: 12 }} /> Log
-                      </a>
-                    )}
-                    {ex.screenshotLink && (
-                      <a
-                        href={ex.screenshotLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#64748b", textDecoration: "none" }}
-                        onMouseEnter={e => (e.currentTarget.style.color = "#0f172a")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "#64748b")}
-                      >
-                        <OpenInNewIcon sx={{ fontSize: 12 }} /> Screenshot
-                      </a>
-                    )}
-                  </div>
-                </div>
+            <Box sx={{ display: "flex", gap: 0.625, flexWrap: "wrap", ml: 0.5 }}>
+              {cluster.affectedAreas.map(area => (
+                <Chip
+                  key={area}
+                  label={area}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontSize: 10, height: 20, borderColor: "divider", color: "text.secondary" }}
+                />
               ))}
-            </div>
-          </div>
-        </div>
-      </Collapse>
-      </div>{/* end right column */}
-    </div>
+            </Box>
+          </Box>
+
+          {/* Failure text preview (dark log block) */}
+          <Box sx={{ background: "#0f172a", borderRadius: 2, border: "1px solid #1e293b", overflow: "hidden" }}>
+            <Box sx={{ maxHeight: 130, overflowY: "auto", py: 0.75 }}>
+              <Box sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace", fontSize: 11 }}>
+                {renderPreviewLines(previewLines)}
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Expand toggle */}
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => setExpanded(o => !o)}
+            endIcon={<KeyboardArrowDownIcon sx={{
+              fontSize: "16px !important",
+              transition: "transform 0.22s ease",
+              transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+            }} />}
+            sx={{
+              alignSelf: "flex-start",
+              borderColor: "divider", color: "text.secondary",
+              fontSize: 12, textTransform: "none", py: "5px", px: 1.5, minHeight: 0,
+              "&:hover": { borderColor: "text.disabled", color: "text.primary", bgcolor: "action.hover" },
+            }}
+          >
+            {expanded ? "Hide details" : `Show details · ${cluster.examples.length} example${cluster.examples.length !== 1 ? "s" : ""}`}
+          </Button>
+        </Box>
+
+        {/* Expanded section */}
+        <Collapse in={expanded} unmountOnExit>
+          <Box sx={{
+            borderTop: 1, borderColor: "divider",
+            p: "16px 24px 20px",
+            bgcolor: "background.default",
+            display: "flex", flexDirection: "column", gap: 2,
+          }}>
+            <Box>
+              <Typography sx={{
+                fontSize: 10, fontWeight: 700, color: "text.secondary",
+                textTransform: "uppercase", letterSpacing: "0.07em", mb: 0.875,
+              }}>
+                Example Tests
+              </Typography>
+              <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+                {cluster.examples.map((ex, i) => (
+                  <Box key={i} sx={{
+                    display: "flex", alignItems: "center", gap: 1.25,
+                    px: 2, py: 1.25,
+                    borderBottom: i < cluster.examples.length - 1 ? 1 : 0,
+                    borderColor: "divider",
+                  }}>
+                    <Box component="span" sx={{
+                      bgcolor: "action.hover", color: "text.secondary",
+                      borderRadius: "4px", px: 0.875, py: "2px",
+                      fontSize: 10, fontWeight: 700, flexShrink: 0, letterSpacing: "0.04em",
+                      border: 1, borderColor: "divider",
+                    }}>{ex.area}</Box>
+
+                    <Typography component="span" sx={{
+                      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                      fontSize: 12, color: "text.primary",
+                      flex: 1, minWidth: 0, wordBreak: "break-all",
+                    }}>
+                      {ex.testName}
+                    </Typography>
+
+                    <Box sx={{ display: "flex", gap: 0.75, flexShrink: 0 }}>
+                      {ex.logLink && (
+                        <Button size="small" startIcon={<OpenInNewIcon sx={{ fontSize: "12px !important" }} />}
+                          href={ex.logLink} target="_blank" rel="noopener noreferrer"
+                          sx={{ minWidth: 0, fontSize: 11, textTransform: "none", color: "text.secondary", "&:hover": { color: "text.primary" } }}>
+                          Log
+                        </Button>
+                      )}
+                      {ex.screenshotLink && (
+                        <Button size="small" startIcon={<OpenInNewIcon sx={{ fontSize: "12px !important" }} />}
+                          href={ex.screenshotLink} target="_blank" rel="noopener noreferrer"
+                          sx={{ minWidth: 0, fontSize: 11, textTransform: "none", color: "text.secondary", "&:hover": { color: "text.primary" } }}>
+                          Screenshot
+                        </Button>
+                      )}
+                    </Box>
+                  </Box>
+                ))}
+              </Paper>
+            </Box>
+          </Box>
+        </Collapse>
+      </Box>
+    </Paper>
   );
 };
 
@@ -388,97 +331,74 @@ const CommonFailuresPage: React.FC = () => {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       {imageSrc && <ImageModal src={imageSrc} onClose={() => setImageSrc(null)} />}
 
       {/* ── Sticky header ── */}
-      <div style={{
-        background: "#fff", borderBottom: "1px solid #e5e7eb",
-        padding: "14px 32px",
-        display: "flex", alignItems: "center", gap: 16,
+      <Box component="header" sx={{
+        bgcolor: "background.paper", borderBottom: 1, borderColor: "divider",
+        px: 4, py: 1.75,
+        display: "flex", alignItems: "center", gap: 2,
         position: "sticky", top: 0, zIndex: 100,
         boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
       }}>
-        <button
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/")}
-          style={{
-            background: "none", border: "1px solid #e2e8f0",
-            borderRadius: 8, padding: "6px 14px",
-            cursor: "pointer", fontSize: 13, color: "#64748b",
-          }}
+          sx={{ borderColor: "divider", color: "text.secondary", textTransform: "none", "&:hover": { borderColor: "text.disabled" } }}
         >
-          ← Dashboard
-        </button>
+          Dashboard
+        </Button>
 
-        <div style={{ flex: 1 }}>
-          <div style={{
-            fontSize: 26, fontWeight: 900, color: "#0f172a",
-            fontFamily: "'JetBrains Mono', monospace",
-            letterSpacing: "-0.02em", lineHeight: 1.15,
-          }}>
+        <Box sx={{ flex: 1 }}>
+          <Typography sx={{ fontSize: 26, fontWeight: 900, color: "text.primary", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "-0.02em", lineHeight: 1.15 }}>
             Common Failures
-          </div>
-          <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 3 }}>
+          </Typography>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>
             Last 24 hours · {env.toUpperCase()} · patterns appearing more than 4 times
-          </div>
-        </div>
+          </Typography>
+        </Box>
 
         <EnvToggle value={env} onChange={handleEnvChange} />
 
         {!loading && !error && (
-          <div style={{
-            background: "#fef2f2", border: "1px solid #fecaca",
-            borderRadius: 10, padding: "6px 18px", textAlign: "center",
-          }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#dc2626" }}>{clusters.length}</div>
-            <div style={{ fontSize: 11, color: "#ef4444" }}>patterns</div>
-          </div>
+          <Box sx={{ bgcolor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 2.5, px: 2.25, py: 0.75, textAlign: "center" }}>
+            <Typography sx={{ fontSize: 20, fontWeight: 800, color: "#dc2626" }}>{clusters.length}</Typography>
+            <Typography sx={{ fontSize: 11, color: "#ef4444" }}>patterns</Typography>
+          </Box>
         )}
-      </div>
+
+        <ThemeToggle />
+      </Box>
 
       {/* ── Content ── */}
-      <div style={{ padding: "24px 40px" }}>
+      <Box sx={{ p: "24px 40px" }}>
 
-        {/* Loading */}
         {loading && (
-          <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>⏳</div>
-            <div>Loading common failures...</div>
-          </div>
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1.5, py: 8, color: "text.secondary" }}>
+            <CircularProgress size={28} />
+            <Typography>Loading common failures…</Typography>
+          </Box>
         )}
 
-        {/* Error */}
-        {!loading && error && (
-          <div style={{
-            background: "#fef2f2", border: "1px solid #fecaca",
-            borderRadius: 10, padding: 20, color: "#dc2626", textAlign: "center",
-          }}>
-            ❌ {error}
-          </div>
-        )}
+        {!loading && error && <Alert severity="error">{error}</Alert>}
 
-        {/* Empty state */}
         {!loading && !error && clusters.length === 0 && (
-          <div style={{
-            background: "#f0fdf4", border: "1px solid #bbf7d0",
-            borderRadius: 10, padding: 40, color: "#16a34a",
-            textAlign: "center", fontSize: 16,
-          }}>
-            🎉 No common failures in the last 24 hours!
-          </div>
+          <Alert severity="success">🎉 No common failures in the last 24 hours!</Alert>
         )}
 
-        {/* Clusters */}
         {!loading && !error && clusters.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}>
             {clusters.map((cluster, i) => (
               <ClusterCard key={i} cluster={cluster} index={i} onImageClick={setImageSrc} />
             ))}
-          </div>
+          </Box>
         )}
 
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };
 

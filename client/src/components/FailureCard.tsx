@@ -49,7 +49,7 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onEx
   const previewLines = extractFatalPreview(reason.text ?? "");
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-      <Box sx={{ bgcolor: "#0f172a", borderRadius: 2, border: "1px solid #1e293b", overflow: "hidden" }}>
+      <Box sx={{ bgcolor: "#000000", borderRadius: 2, border: "1px solid #1e293b", overflow: "hidden" }}>
         <Box sx={{ maxHeight: 170, overflowY: "auto", py: 0.75 }}>
           <Box sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace", fontSize: 11 }}>
             {renderLogLines(previewLines)}
@@ -62,7 +62,7 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onEx
           startIcon={<TerminalIcon sx={{ fontSize: "13px !important" }} />}
           onClick={() => onExpandLog(truncateLogToTestScope(reason.text, testName), label)}
           sx={{
-            borderColor: "#334155", color: "#94a3b8", fontSize: 11, textTransform: "none", py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
+            borderColor: "#334155", color: "text.secondary", fontSize: 11, textTransform: "none", py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
             "&:hover": { borderColor: "#64748b", color: "#e2e8f0", bgcolor: "#1e293b" }
           }}
         >
@@ -118,22 +118,22 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
       }}
     >
       {/* Screenshot panel */}
-      <Box sx={{ flex: "0 0 38%", minWidth: 380, alignSelf: "stretch", bgcolor: "#fff", borderRadius: "10px 0 0 10px", overflow: "hidden", position: "relative" }}>
+      <Box sx={{ flex: "0 0 38%", minWidth: 380, alignSelf: "stretch", bgcolor: "background.paper", borderRadius: "10px 0 0 10px", overflow: "hidden", position: "relative" }}>
         <ScreenshotPanel src={screenshotSrc} onClick={onImageClick} />
       </Box>
 
       {/* Data panel */}
       <CardContent sx={{
         flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1.75,
-        py: 2.5, px: 3.5, borderLeft: "1px solid #e2e8f0",
+        py: 2.5, px: 3.5, borderLeft: 1, borderColor: "divider",
         "&:last-child": { pb: 2.5 },
       }}>
         {/* Header row */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap" }}>
-          <Typography component="span" sx={{ bgcolor: "#f1f5f9", color: "#64748b", borderRadius: "6px", px: 1, py: "2px", fontSize: 11, fontWeight: 700, flexShrink: 0, lineHeight: 1.5 }}>
+          <Typography component="span" sx={{ bgcolor: "action.hover", color: "text.secondary", borderRadius: "6px", px: 1, py: "2px", fontSize: 11, fontWeight: 700, flexShrink: 0, lineHeight: 1.5 }}>
             #{index + 1}
           </Typography>
-          <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, fontWeight: 600, color: "#0f172a", flex: 1, minWidth: 0, wordBreak: "break-all", lineHeight: 1.5 }}>
+          <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, fontWeight: 600, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all", lineHeight: 1.5 }}>
             {item.testName}
           </Typography>
           {testRailUrl && (
@@ -148,17 +148,17 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
               sx={{
                 borderColor: "#cbd5e1", color: "#475569", fontSize: 11, textTransform: "none",
                 py: "2px", px: "8px", minHeight: 0, lineHeight: 1.4, flexShrink: 0,
-                "&:hover": { borderColor: "#94a3b8", bgcolor: "#f8fafc", color: "#0f172a" },
+                "&:hover": { borderColor: "#94a3b8", bgcolor: "#f8fafc", color: "text.primary" },
               }}
             >
               TR
             </Button>
           )}
           {item.lastFailure.server && (
-            <Chip label={`🖥️ ${item.lastFailure.server}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "#475569", borderColor: "#e2e8f0", flexShrink: 0 }} />
+            <Chip label={`🖥️ ${item.lastFailure.server}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "text.secondary", borderColor: "divider", flexShrink: 0 }} />
           )}
           {item.lastFailure.almaVersion && (
-            <Chip label={`📦 ${item.lastFailure.almaVersion}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "#475569", borderColor: "#e2e8f0", flexShrink: 0 }} />
+            <Chip label={`📦 ${item.lastFailure.almaVersion}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "text.secondary", borderColor: "divider", flexShrink: 0 }} />
           )}
           <Box component="span" sx={{ bgcolor: color, color: "#fff", borderRadius: 20, px: 1.5, py: "3px", fontSize: 12, fontWeight: 700, flexShrink: 0, whiteSpace: "nowrap", lineHeight: 1.6 }}>
             Failed {item.failCount} {item.failCount === 1 ? "time" : "times"} in {WINDOW_DAYS} days
@@ -169,11 +169,11 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
         {primary && (
           <Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.875 }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 Primary Reason
               </Typography>
               {primary.lastDate && (
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", bgcolor: "#f1f5f9", borderRadius: "4px", px: 0.875, py: "1px", border: "1px solid #e2e8f0" }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", bgcolor: "action.hover", borderRadius: "4px", px: 0.875, py: "1px", border: 1, borderColor: "divider" }}>
                   📅 {dateOnly(primary.lastDate)}
                 </Typography>
               )}
@@ -199,7 +199,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
               px: "10px",
               minHeight: 0,
               lineHeight: 1.4,
-              "&:hover": { borderColor: "#94a3b8", bgcolor: "#fff", color: "#0f172a" },
+              "&:hover": { borderColor: "#94a3b8", bgcolor: "#fff", color: "text.primary" },
             }}
           >
             History
@@ -225,11 +225,11 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
                 {extra.map((reason, i) => (
                   <Box key={i}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.875 }}>
-                      <Typography variant="caption" sx={{ fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.07em" }}>
                         Reason {i + 2}
                       </Typography>
                       {reason.lastDate && (
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", bgcolor: "#f1f5f9", borderRadius: "4px", px: 0.875, py: "1px", border: "1px solid #e2e8f0" }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", bgcolor: "action.hover", borderRadius: "4px", px: 0.875, py: "1px", border: 1, borderColor: "divider" }}>
                           📅 {dateOnly(reason.lastDate)}
                         </Typography>
                       )}
@@ -244,10 +244,10 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
         )}
 
         {/* Meta chips */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: "auto", pt: 0.5, borderTop: "1px solid #f1f5f9" }}>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: "auto", pt: 0.5, borderTop: 1, borderColor: "divider" }}>
           {(item.lastFailure.buildNumber ?? 0) > 0 && (
             <Chip label={`🔨 Build ${item.lastFailure.buildNumber}`} size="small" variant="outlined"
-              sx={{ fontSize: 11, color: "#475569", borderColor: "#e2e8f0" }} />
+              sx={{ fontSize: 11, color: "text.secondary", borderColor: "divider" }} />
           )}
         </Box>
       </CardContent>

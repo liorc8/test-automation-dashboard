@@ -11,7 +11,7 @@ export function renderLogLines(lines: string[]) {
         style={{
           display: "block",
           background: isFatal ? "rgba(239,68,68,0.15)" : "transparent",
-          color: isFatal ? "#fca5a5" : "#cbd5e1",
+          color: isFatal ? "#fca5a5" : "#ffffff",
           fontWeight: isFatal ? 700 : "normal",
           borderLeft: isFatal ? "3px solid #ef4444" : "3px solid transparent",
           padding: "1px 8px",

@@ -5,6 +5,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { getTestHistory } from "../services/apiService";
 import { useTestRailIds } from "../hooks/useTestRailIds";
+import ThemeToggle from "../components/ThemeToggle";
 import type { TestHistoryResponse, TestHistoryRow } from "../types/TestHistory";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -55,8 +56,8 @@ const TestHistoryPage: React.FC = () => {
     }, [data]);
 
     return (
-        <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
-            <Box component="header" sx={{ bgcolor: "#fff", borderBottom: "1px solid #e5e7eb", px: 4, py: 1.5, display: "flex", alignItems: "center", gap: 2, position: "sticky", top: 0, zIndex: 100 }}>
+        <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+            <Box component="header" sx={{ bgcolor: "background.paper", borderBottom: 1, borderColor: "divider", px: 4, py: 1.5, display: "flex", alignItems: "center", gap: 2, position: "sticky", top: 0, zIndex: 100 }}>
                 <Button variant="outlined" size="small" startIcon={<ArrowBackIcon />} onClick={() => {
                     const referrer = sessionStorage.getItem('recentFailuresTab');
                     if (referrer === 'from-recent-failures') {
@@ -87,6 +88,7 @@ const TestHistoryPage: React.FC = () => {
                         TestRail
                     </Button>
                 )}
+                <ThemeToggle />
             </Box>
 
             <Box sx={{ p: "24px 40px" }}>
@@ -137,13 +139,13 @@ const TestHistoryPage: React.FC = () => {
                             }
                             return Array.from(grouped.entries()).map(([server, rows]) => (
                                 <Box key={server} sx={{ mb: 3 }}>
-                                    <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#0f172a", mb: 1.5, px: 1 }}>
+                                    <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary", mb: 1.5, px: 1 }}>
                                         🖥️ {server}
                                     </Typography>
                                     <Paper variant="outlined" sx={{ overflow: "hidden" }}>
                                         <Table size="small">
                                             <TableHead>
-                                                <TableRow sx={{ bgcolor: "#f8fafc" }}>
+                                                <TableRow sx={{ bgcolor: "background.default" }}>
                                                     <TableCell sx={{ fontWeight: 700, minWidth: 110 }}>Date</TableCell>
                                                     <TableCell align="center" sx={{ fontWeight: 700 }}>Result</TableCell>
                                                     <TableCell sx={{ fontWeight: 700 }}>Alma Version</TableCell>

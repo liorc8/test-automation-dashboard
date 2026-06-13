@@ -21,8 +21,8 @@ const ImageModal: React.FC<{ src: string; onClose: () => void }> = ({ src, onClo
         size="small"
         sx={{
           position: "absolute", top: -14, right: -14,
-          bgcolor: "#ef4444", color: "#fff", width: 28, height: 28,
-          "&:hover": { bgcolor: "#dc2626" },
+          bgcolor: "#1e293b", color: "#fff", width: 28, height: 28,
+          "&:hover": { bgcolor: "#334155" },
           boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
         }}
       >

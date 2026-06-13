@@ -40,7 +40,13 @@ const SearchInput: React.FC<SearchInputProps> = ({
           </InputAdornment>
         ) : undefined,
       }}
-      sx={sx}
+      sx={[
+        {
+          "& .MuiOutlinedInput-root": { bgcolor: "background.paper" },
+          "& .MuiOutlinedInput-input": { color: "text.primary" },
+        },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
     />
   );
 };

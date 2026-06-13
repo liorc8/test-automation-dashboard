@@ -9,6 +9,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import SearchInput from "../components/SearchInput";
+import ThemeToggle from "../components/ThemeToggle";
 import { useTestRailIds } from "../hooks/useTestRailIds";
 import FailureCard, { latestFailedToGroupedItem } from "../components/FailureCard";
 import ImageModal from "../components/ImageModal";
@@ -111,7 +112,7 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                     }}
                   >
                     <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#ef4444", flexShrink: 0 }} />
-                    <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "#0f172a", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
+                    <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
                       {test.testName}
                     </Typography>
                     {trUrl && (
@@ -170,8 +171,9 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                   <Collapse in={isOpen} unmountOnExit>
                     <Box sx={{
                       p: "16px 16px 20px",
-                      bgcolor: "#f8fafc",
-                      borderBottom: !isLast ? "1px solid #e2e8f0" : "none",
+                      bgcolor: "background.default",
+                      borderBottom: !isLast ? 1 : 0,
+                      borderColor: "divider",
                     }}>
                       <FailureCard
                         item={latestFailedToGroupedItem(test)}
@@ -276,7 +278,7 @@ const RecentFailuresPage: React.FC = () => {
   }, [data, search, sortBy])();
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       {imageSrc && <ImageModal src={imageSrc} onClose={() => setImageSrc(null)} />}
       {logModal && (
         <LogModal lines={logModal.lines} testName={logModal.testName} reasonLabel={logModal.label}
@@ -285,7 +287,7 @@ const RecentFailuresPage: React.FC = () => {
 
       {/* ── Sticky header ── */}
       <Box component="header" sx={{
-        bgcolor: "#fff", borderBottom: "1px solid #e5e7eb",
+        bgcolor: "background.paper", borderBottom: 1, borderColor: "divider",
         px: 4, py: 1.75,
         display: "flex", alignItems: "center", gap: 2,
         position: "sticky", top: 0, zIndex: 100,
@@ -302,7 +304,7 @@ const RecentFailuresPage: React.FC = () => {
         </Button>
 
         <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontSize: 26, fontWeight: 900, color: "#0f172a", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "-0.02em", lineHeight: 1.15 }}>
+          <Typography sx={{ fontSize: 26, fontWeight: 900, color: "text.primary", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "-0.02em", lineHeight: 1.15 }}>
             Recent Failures
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: "3px" }}>
@@ -328,11 +330,12 @@ const RecentFailuresPage: React.FC = () => {
             <Typography sx={{ fontSize: 11, color: "#ef4444" }}>broken now</Typography>
           </Box>
         )}
+        <ThemeToggle />
       </Box>
 
       {/* ── View toggle + search toolbar ── */}
       <Box sx={{
-        bgcolor: "#fff", borderBottom: "1px solid #e5e7eb",
+        bgcolor: "background.paper", borderBottom: 1, borderColor: "divider",
         px: 4, py: 1.5,
         display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
@@ -362,7 +365,7 @@ const RecentFailuresPage: React.FC = () => {
         <SearchInput
           value={search}
           onChange={setSearch}
-          sx={{ width: 280, "& .MuiOutlinedInput-root": { bgcolor: "#f8fafc" } }}
+          sx={{ width: 280 }}
         />
       </Box>
 

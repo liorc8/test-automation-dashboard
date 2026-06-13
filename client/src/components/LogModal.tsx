@@ -15,13 +15,13 @@ const LogModal: React.FC<LogModalProps> = ({ lines, testName, reasonLabel, onClo
     onClose={onClose}
     maxWidth="md"
     fullWidth
-    PaperProps={{ sx: { bgcolor: "#0f172a", border: "1px solid #1e293b", borderRadius: 3, boxShadow: "0 32px 80px rgba(0,0,0,0.65)" } }}
+    PaperProps={{ sx: { bgcolor: "#000000", backgroundImage: "none", border: "1px solid #1e293b", borderRadius: 3, boxShadow: "0 32px 80px rgba(0,0,0,0.65)" } }}
   >
     <DialogTitle sx={{ borderBottom: "1px solid #1e293b", pb: 1.5 }}>
       <Typography sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, color: "#f1f5f9", mb: 0.375 }}>
         {testName}
       </Typography>
-      <Typography variant="caption" sx={{ color: "#475569", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+      <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
         {reasonLabel}&nbsp;·&nbsp;Chronological&nbsp;·&nbsp;Truncated at test entry
       </Typography>
     </DialogTitle>
@@ -31,7 +31,7 @@ const LogModal: React.FC<LogModalProps> = ({ lines, testName, reasonLabel, onClo
       </Box>
     </DialogContent>
     <DialogActions sx={{ borderTop: "1px solid #1e293b", justifyContent: "space-between", px: 2.5, py: 1 }}>
-      <Typography variant="caption" sx={{ color: "#334155" }}>
+      <Typography variant="caption" sx={{ color: "#64748b" }}>
         {lines.length} lines shown · FATAL at bottom
       </Typography>
       <Button size="small" onClick={onClose} sx={{ color: "#94a3b8", textTransform: "none" }}>

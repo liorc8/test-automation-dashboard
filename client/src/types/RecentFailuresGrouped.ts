@@ -9,6 +9,7 @@ export type RecentFailureGroupedItem = {
   testName: string;
   failCount: number;
   lastFailedOn: string | null;
+  jobName?: string | null;
   reasons: ReasonEntry[];
   lastFailure: {
     server: string | null;

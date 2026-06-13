@@ -1,5 +1,6 @@
 import { execute } from "../db";
 import { cleanReason } from "../utils/failureText";
+import { jobNameFromLinks } from "../utils/jobName";
 import { EnvFilter, buildServerFilter } from "./envFilter";
 
 export type { EnvFilter };
@@ -234,17 +235,21 @@ export async function getAreaRecentFailuresGrouped(
       })
       .filter(Boolean) as Array<{ text: string; lastDate: string | null; screenshotLink: string | null; logLink: string | null }>;
 
+    const logLink = (r.LOGLINK ?? null) as string | null;
+    const screenshotLink = (r.SCREENSHOTLINK ?? null) as string | null;
+
     return {
       testName: String(r.TESTNAME),
       failCount: Number(r.FAIL_COUNT ?? 0),
       lastFailedOn: formatUnixMs(r.LAST_ENDING_UNIX),
+      jobName: jobNameFromLinks(logLink ?? reasons[0]?.logLink, screenshotLink ?? reasons[0]?.screenshotLink),
       reasons,
       lastFailure: {
         server: (r.SERVER ?? null) as string | null,
         almaVersion: (r.ALMAVERSION ?? null) as string | null,
         buildNumber: toNumber(r.BUILDNUMBER),
-        logLink: (r.LOGLINK ?? null) as string | null,
-        screenshotLink: (r.SCREENSHOTLINK ?? null) as string | null,
+        logLink,
+        screenshotLink,
       },
     };
   });

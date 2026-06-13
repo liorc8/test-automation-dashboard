@@ -12,12 +12,13 @@ import SearchInput from "../components/SearchInput";
 import ThemeToggle from "../components/ThemeToggle";
 import { useTestRailIds } from "../hooks/useTestRailIds";
 import FailureCard, { latestFailedToGroupedItem } from "../components/FailureCard";
+import FailureRowList from "../components/FailureRowList";
 import ImageModal from "../components/ImageModal";
 import LogModal from "../components/LogModal";
 import { WINDOW_DAYS } from "../components/failureHelpers";
 import { getAreaRecentFailuresGrouped, getAreaLatestFailedTests } from "../services/apiService";
 import type { EnvFilter } from "../services/apiService";
-import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped";
+import type { AreaRecentFailuresGroupedResponse, RecentFailureGroupedItem } from "../types/RecentFailuresGrouped";
 import type { LatestFailedTestsResponse } from "../types/LatestFailed";
 
 const LIMIT = 200;
@@ -231,8 +232,8 @@ const RecentFailuresPage: React.FC = () => {
   // Restore tab state from URL query parameter
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam === '0' || tabParam === '1') {
-      setActiveTab(Number(tabParam) as 0 | 1);
+    if (tabParam === '0' || tabParam === '1' || tabParam === '2') {
+      setActiveTab(Number(tabParam));
     }
   }, []);
 
@@ -277,6 +278,19 @@ const RecentFailuresPage: React.FC = () => {
     return list;
   }, [data, search, sortBy])();
 
+  // Group failures by Jenkins job name (for the "By Job" tab).
+  const jobGroups = React.useMemo(() => {
+    const groups = new Map<string, RecentFailureGroupedItem[]>();
+    for (const item of items) {
+      const job = item.jobName?.trim() || "Unknown job";
+      if (!groups.has(job)) groups.set(job, []);
+      groups.get(job)!.push(item);
+    }
+    return Array.from(groups.entries())
+      .map(([job, jobItems]) => ({ job, items: jobItems }))
+      .sort((a, b) => b.items.length - a.items.length || a.job.localeCompare(b.job));
+  }, [items]);
+
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       {imageSrc && <ImageModal src={imageSrc} onClose={() => setImageSrc(null)} />}
@@ -313,7 +327,11 @@ const RecentFailuresPage: React.FC = () => {
             </Typography>
             <Typography sx={{ fontSize: 11, color: "#cbd5e1" }}>·</Typography>
             <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-              {activeTab === 0 ? `last ${WINDOW_DAYS} days · ${env.toUpperCase()}` : `latest status · ${env.toUpperCase()}`}
+              {activeTab === 1
+                ? `latest status · ${env.toUpperCase()}`
+                : activeTab === 2
+                  ? `grouped by job · last ${WINDOW_DAYS} days · ${env.toUpperCase()}`
+                  : `last ${WINDOW_DAYS} days · ${env.toUpperCase()}`}
             </Typography>
           </Box>
         </Box>
@@ -328,6 +346,12 @@ const RecentFailuresPage: React.FC = () => {
           <Box sx={{ bgcolor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 2.5, px: 2.25, py: 0.75, textAlign: "center" }}>
             <Typography sx={{ fontSize: 20, fontWeight: 800, color: "#dc2626" }}>{latestData.totalCount}</Typography>
             <Typography sx={{ fontSize: 11, color: "#ef4444" }}>broken now</Typography>
+          </Box>
+        )}
+        {activeTab === 2 && data && (
+          <Box sx={{ bgcolor: "background.default", border: 1, borderColor: "divider", borderRadius: 2.5, px: 2.25, py: 0.75, textAlign: "center" }}>
+            <Typography sx={{ fontSize: 20, fontWeight: 800, color: "text.primary" }}>{jobGroups.length}</Typography>
+            <Typography sx={{ fontSize: 11, color: "text.secondary" }}>jobs</Typography>
           </Box>
         )}
         <ThemeToggle />
@@ -358,8 +382,9 @@ const RecentFailuresPage: React.FC = () => {
             },
           }}
         >
-          <ToggleButton value={0}>Full View</ToggleButton>
-          <ToggleButton value={1}>List View</ToggleButton>
+          <ToggleButton value={0}>All</ToggleButton>
+          <ToggleButton value={1}>By Server</ToggleButton>
+          <ToggleButton value={2}>By Job</ToggleButton>
         </ToggleButtonGroup>
 
         <SearchInput
@@ -434,6 +459,53 @@ const RecentFailuresPage: React.FC = () => {
                 onOpenHistory={openTestHistory}
                 testRailUrlFor={testRailUrlFor}
               />
+            )}
+          </>
+        )}
+
+        {/* Tab 2: Grouped by Jenkins job */}
+        {activeTab === 2 && (
+          <>
+            {loading && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={220} />)}
+              </Box>
+            )}
+            {!loading && error && <Alert severity="error">{error}</Alert>}
+            {!loading && !error && jobGroups.length === 0 && (
+              <Alert severity="success">🎉 No failures found in the last {WINDOW_DAYS} days!</Alert>
+            )}
+            {!loading && !error && jobGroups.length > 0 && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 3.5 }}>
+                {jobGroups.map(group => (
+                  <Box key={group.job}>
+                    {/* Job header */}
+                    <Box sx={{
+                      display: "flex", alignItems: "center", gap: 1.5,
+                      px: 2.25, py: 1.5,
+                      bgcolor: "#1e293b",
+                      borderRadius: "8px 8px 0 0",
+                      borderBottom: "3px solid #475569",
+                    }}>
+                      <Typography sx={{ fontSize: 18, lineHeight: 1 }}>🛠️</Typography>
+                      <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 15, fontWeight: 800, color: "#f1f5f9", letterSpacing: "0.03em", wordBreak: "break-all" }}>
+                        {group.job}
+                      </Typography>
+                      <Box component="span" sx={{ ml: "auto", bgcolor: "#475569", color: "#f1f5f9", borderRadius: 20, px: 1.5, py: "3px", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                        {group.items.length} {group.items.length === 1 ? "test" : "tests"}
+                      </Box>
+                    </Box>
+                    {/* Compact rows (same look as List View) */}
+                    <FailureRowList
+                      items={group.items}
+                      onImageClick={setImageSrc}
+                      onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
+                      onOpenHistory={openTestHistory}
+                      testRailUrlFor={testRailUrlFor}
+                    />
+                  </Box>
+                ))}
+              </Box>
             )}
           </>
         )}

@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
-import { AREAS } from "../config/areas";
+import { isKnownArea } from "../services/areasService";
 import { getAreaRecentFailuresGrouped, EnvFilter } from "../services/areaRecentFailuresGroupedService";
 
 export const getAreaRecentFailuresGroupedHandler = async (req: Request, res: Response) => {
     try {
         const areaName = req.params.areaName;
 
-        const isKnownArea = AREAS.some((a) => a.id === areaName);
-        if (!isKnownArea) return res.status(404).json({ error: `Unknown areaId: ${areaName}` });
+        const known = await isKnownArea(areaName);
+        if (!known) return res.status(404).json({ error: `Unknown areaId: ${areaName}` });
 
         const daysBackRaw = (req.query.windowDays ?? req.query.daysBack) as string | undefined;
         const daysBack = daysBackRaw ? Number(daysBackRaw) : 7;

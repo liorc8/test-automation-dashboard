@@ -7,7 +7,9 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import SearchInput from "../components/SearchInput";
+import { useTestRailIds } from "../hooks/useTestRailIds";
 import FailureCard, { latestFailedToGroupedItem } from "../components/FailureCard";
 import ImageModal from "../components/ImageModal";
 import LogModal from "../components/LogModal";
@@ -31,9 +33,10 @@ interface LatestFailedViewProps {
   onImageClick: (src: string) => void;
   onExpandLog: (lines: string[], testName: string, label: string) => void;
   onOpenHistory: (testName: string) => void;
+  testRailUrlFor: (testName: string) => string | null;
 }
 
-const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog, onOpenHistory }) => {
+const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor }) => {
   const [openTestName, setOpenTestName] = useState<string | null>(null);
 
   const handleRowClick = (testName: string) => {
@@ -90,6 +93,7 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
             {serverGroup.tests.map((test, idx) => {
               const isOpen = openTestName === test.testName;
               const isLast = idx === serverGroup.tests.length - 1;
+              const trUrl = testRailUrlFor(test.testName);
 
               return (
                 <Box key={test.testName}>
@@ -110,6 +114,30 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                     <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "#0f172a", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
                       {test.testName}
                     </Typography>
+                    {trUrl && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<OpenInNewIcon sx={{ fontSize: "13px !important" }} />}
+                        href={trUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        sx={{
+                          borderColor: "#cbd5e1",
+                          color: "#475569",
+                          textTransform: "none",
+                          fontSize: 11,
+                          py: "3px",
+                          px: "10px",
+                          minHeight: 0,
+                          lineHeight: 1.4,
+                          "&:hover": { borderColor: "#94a3b8", bgcolor: "#fff", color: "#0f172a" },
+                        }}
+                      >
+                        TR
+                      </Button>
+                    )}
                     <Button
                       size="small"
                       variant="outlined"
@@ -151,6 +179,7 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                         onImageClick={onImageClick}
                         onExpandLog={onExpandLog}
                         onOpenHistory={() => onOpenHistory(test.testName)}
+                        testRailUrl={testRailUrlFor(test.testName)}
                       />
                     </Box>
                   </Collapse>
@@ -187,6 +216,8 @@ const RecentFailuresPage: React.FC = () => {
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
+
+  const { urlFor: testRailUrlFor } = useTestRailIds(areaName, env);
 
   const openTestHistory = (testName: string) => {
     if (!areaName) return;
@@ -373,6 +404,7 @@ const RecentFailuresPage: React.FC = () => {
                       onImageClick={setImageSrc}
                       onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
                       onOpenHistory={() => openTestHistory(item.testName)}
+                      testRailUrl={testRailUrlFor(item.testName)}
                     />
                   ))}
                 </Box>
@@ -397,6 +429,7 @@ const RecentFailuresPage: React.FC = () => {
                 onImageClick={setImageSrc}
                 onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
                 onOpenHistory={openTestHistory}
+                testRailUrlFor={testRailUrlFor}
               />
             )}
           </>

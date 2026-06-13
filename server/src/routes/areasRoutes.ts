@@ -10,6 +10,7 @@ import { getAreaDailyTrendHandler } from "../controllers/areaDailyTrendControlle
 import { getAreaLatestFailedHandler } from "../controllers/areaLatestFailedController";
 import { getAllAreasDailyTrendHandler } from "../controllers/allAreasDailyTrendController";
 import { getTestHistoryHandler } from "../controllers/testHistoryController";
+import { getAreaTestRailIdsHandler } from "../controllers/areaTestRailController";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.get("/:areaName/health-tests", getAreaHealthTestsHandler);
 router.get("/:areaName/daily-trend", getAreaDailyTrendHandler);
 router.get("/:areaName/latest-failed-tests", getAreaLatestFailedHandler);
 router.get("/:areaName/tests/:testName/history", getTestHistoryHandler);
+router.get("/:areaName/testrail-ids", getAreaTestRailIdsHandler);
 
 export default router;

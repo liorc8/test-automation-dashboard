@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Box, Typography, Button, Paper, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress, Alert } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { getTestHistory } from "../services/apiService";
+import { useTestRailIds } from "../hooks/useTestRailIds";
 import type { TestHistoryResponse, TestHistoryRow } from "../types/TestHistory";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -21,6 +23,9 @@ const TestHistoryPage: React.FC = () => {
     const [data, setData] = useState<TestHistoryResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    const { urlFor: testRailUrlFor } = useTestRailIds(areaName, env);
+    const testRailUrl = testName ? testRailUrlFor(testName) : null;
 
     useEffect(() => {
         if (!areaName || !testName) return;
@@ -69,6 +74,19 @@ const TestHistoryPage: React.FC = () => {
                     <Typography sx={{ fontSize: 22, fontWeight: 800 }}>{testName}</Typography>
                     <Typography variant="caption" sx={{ color: "#94a3b8" }}>{areaName} · {env.toUpperCase()}</Typography>
                 </Box>
+                {testRailUrl && (
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<OpenInNewIcon />}
+                        href={testRailUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ borderColor: "#e2e8f0", color: "#64748b", textTransform: "none" }}
+                    >
+                        TestRail
+                    </Button>
+                )}
             </Box>
 
             <Box sx={{ p: "24px 40px" }}>

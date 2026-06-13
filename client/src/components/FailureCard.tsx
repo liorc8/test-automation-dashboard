@@ -94,9 +94,10 @@ interface FailureCardProps {
   onImageClick: (src: string) => void;
   onExpandLog: (lines: string[], testName: string, label: string) => void;
   onOpenHistory: () => void;
+  testRailUrl?: string | null;
 }
 
-const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory }) => {
+const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = item.reasons[0] ?? null;
   const extra = item.reasons.slice(1, 3);
@@ -135,6 +136,24 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
           <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, fontWeight: 600, color: "#0f172a", flex: 1, minWidth: 0, wordBreak: "break-all", lineHeight: 1.5 }}>
             {item.testName}
           </Typography>
+          {testRailUrl && (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<OpenInNewIcon sx={{ fontSize: "13px !important" }} />}
+              href={testRailUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                borderColor: "#cbd5e1", color: "#475569", fontSize: 11, textTransform: "none",
+                py: "2px", px: "8px", minHeight: 0, lineHeight: 1.4, flexShrink: 0,
+                "&:hover": { borderColor: "#94a3b8", bgcolor: "#f8fafc", color: "#0f172a" },
+              }}
+            >
+              TR
+            </Button>
+          )}
           {item.lastFailure.server && (
             <Chip label={`🖥️ ${item.lastFailure.server}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "#475569", borderColor: "#e2e8f0", flexShrink: 0 }} />
           )}

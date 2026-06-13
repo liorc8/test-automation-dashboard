@@ -129,6 +129,22 @@ export const getAreaHealthTests = async (
   return handleResponse<AreaHealthTestsResponse>(response);
 };
 
+export type TestRailIdsResponse = {
+  areaName: string;
+  env: EnvFilter;
+  baseUrl: string;
+  ids: Record<string, string>;
+};
+
+export const getAreaTestRailIds = async (
+  areaName: string,
+  env: EnvFilter = "qa"
+): Promise<TestRailIdsResponse> => {
+  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/testrail-ids?env=${env}`;
+  const response = await fetch(url);
+  return handleResponse<TestRailIdsResponse>(response);
+};
+
 export const getAreaRecentFailuresGrouped = async (
   areaName: string,
   windowDays: number = 10,

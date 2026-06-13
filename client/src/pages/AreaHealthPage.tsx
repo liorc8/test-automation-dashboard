@@ -12,6 +12,7 @@ import SearchInput from "../components/SearchInput";
 import FailureCard, { latestFailedToGroupedItem } from "../components/FailureCard";
 import ImageModal from "../components/ImageModal";
 import LogModal from "../components/LogModal";
+import { useTestRailIds } from "../hooks/useTestRailIds";
 import {
   getAreaHealthTests, getAreaLatestFailedTests,
   type HealthBucket, type HealthTestItem, type EnvFilter,
@@ -67,6 +68,8 @@ const AreaHealthPage: React.FC = () => {
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
+
+  const { urlFor: testRailUrlFor } = useTestRailIds(areaName, env);
 
   useEffect(() => {
     if (!areaName || !isValidBucket(bucket)) return;
@@ -330,6 +333,7 @@ const AreaHealthPage: React.FC = () => {
                                       onImageClick={setImageSrc}
                                       onExpandLog={(lines, testName, lbl) => setLogModal({ lines, testName, label: lbl })}
                                       onOpenHistory={() => openTestHistory(t.testName)}
+                                      testRailUrl={testRailUrlFor(t.testName)}
                                     />
                                   )}
                                   {!latestLoading && !failure && (

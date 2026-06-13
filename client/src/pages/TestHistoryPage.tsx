@@ -87,8 +87,17 @@ const TestHistoryPage: React.FC = () => {
                             <Typography sx={{ fontWeight: 700, mb: 1 }}>Pass Rate (by day)</Typography>
                             <Box sx={{ width: "100%", height: 160 }}>
                                 <ResponsiveContainer>
-                                    <AreaChart data={chartPoints} margin={{ top: 6, right: 12, left: 0, bottom: 6 }}>
-                                        <XAxis dataKey="date" hide />
+                                    <AreaChart data={chartPoints} margin={{ top: 6, right: 12, left: 0, bottom: 24 }}>
+                                        <XAxis
+                                            dataKey="date"
+                                            tickFormatter={(value: string) => {
+                                                const [, m, d] = value.split("-");
+                                                return d && m ? `${d}/${m}` : value;
+                                            }}
+                                            tick={{ fontSize: 11, fill: "#94a3b8" }}
+                                            tickMargin={8}
+                                            minTickGap={20}
+                                        />
                                         <YAxis domain={[0, 100]} hide />
                                         <Tooltip
                                             contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 6 }}

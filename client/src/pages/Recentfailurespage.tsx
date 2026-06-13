@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Box, Typography, Button, TextField, Select, MenuItem,
-  InputAdornment, Card, CardContent, Chip, Collapse,
+  Box, Typography, Button, Select, MenuItem,
+  Card, CardContent, Chip, Collapse,
   Dialog, DialogTitle, DialogContent, DialogActions,
   ToggleButtonGroup, ToggleButton, Paper, Skeleton, Alert,
   IconButton,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
+import SearchInput from "../components/SearchInput";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import BrokenImageIcon from "@mui/icons-material/BrokenImage";
@@ -755,18 +755,9 @@ const RecentFailuresPage: React.FC = () => {
           <ToggleButton value={1}>List View</ToggleButton>
         </ToggleButtonGroup>
 
-        <TextField
-          size="small"
-          placeholder="Search by test name…"
+        <SearchInput
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" sx={{ color: "text.disabled" }} />
-              </InputAdornment>
-            ),
-          }}
+          onChange={setSearch}
           sx={{ width: 280, "& .MuiOutlinedInput-root": { bgcolor: "#f8fafc" } }}
         />
       </Box>

@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Box, Typography, Button, TextField, Paper,
+  Box, Typography, Button, Paper,
   Table, TableHead, TableBody, TableRow, TableCell,
   TableContainer, LinearProgress, Alert, Skeleton,
-  InputAdornment,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import SearchIcon from "@mui/icons-material/Search";
 import HistoryIcon from "@mui/icons-material/History";
+import SearchInput from "../components/SearchInput";
 import { getAreaHealthTests, type HealthBucket, type HealthTestItem } from "../services/apiService";
 
 const BUCKET_COLOR: Record<HealthBucket, string> = {
@@ -150,18 +149,9 @@ const AreaHealthPage: React.FC = () => {
           <>
             {/* Search bar */}
             <Box sx={{ display: "flex", gap: 1.5, mb: 2.5, alignItems: "center" }}>
-              <TextField
-                size="small"
-                placeholder="Search by test name…"
+              <SearchInput
                 value={search}
-                onChange={e => setSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" sx={{ color: "text.disabled" }} />
-                    </InputAdornment>
-                  ),
-                }}
+                onChange={setSearch}
                 sx={{ maxWidth: 480, flex: 1, "& .MuiOutlinedInput-root": { bgcolor: "#fff" } }}
               />
               <Typography variant="body2" sx={{ color: "#94a3b8" }}>{filtered.length} results</Typography>

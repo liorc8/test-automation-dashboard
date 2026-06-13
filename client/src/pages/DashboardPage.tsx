@@ -9,8 +9,6 @@ import {
   Divider,
   Button,
   Paper,
-  TextField,
-  InputAdornment,
   List,
   ListItemButton,
   ListItemText,
@@ -19,6 +17,7 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import SearchIcon from "@mui/icons-material/Search";
+import SearchInput from "../components/SearchInput";
 
 import AreaCard from "../components/AreaCard";
 import EnvToggle from "../components/EnvToggle";
@@ -219,11 +218,10 @@ const DashboardPage: React.FC = () => {
               <SearchIcon />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <TextField
-                size="small"
+              <SearchInput
                 fullWidth
                 value={testQuery}
-                onChange={(e) => setTestQuery(e.target.value)}
+                onChange={setTestQuery}
                 placeholder="Search tests across all areas…"
                 sx={{
                   maxWidth: 420,
@@ -234,13 +232,6 @@ const DashboardPage: React.FC = () => {
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#3b82f6" },
                   },
                   "& .MuiOutlinedInput-input::placeholder": { opacity: 0.6 },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ fontSize: 18, color: "#94a3b8" }} />
-                    </InputAdornment>
-                  ),
                 }}
               />
             </Box>

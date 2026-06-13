@@ -16,8 +16,8 @@ export const getTestResults = async (req: Request, res: Response) => {
       const sql = `
         WITH latest_per_test AS (
           SELECT
-            UPPER(AREA) AS AREA,
-            UPPER(TESTNAME) AS TESTNAME,
+            AREA,
+            TESTNAME,
             TESTEDON,
             ENDINGTIMEUNIX,
             ROW_NUMBER() OVER (

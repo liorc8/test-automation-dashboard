@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Box, Typography, Button, Paper, Table, TableHead, TableBody, TableRow, TableCell, LinearProgress, CircularProgress, Alert } from "@mui/material";
+import { Box, Typography, Button, Paper, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress, Alert } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { getTestHistory } from "../services/apiService";
 import type { TestHistoryResponse, TestHistoryRow } from "../types/TestHistory";
@@ -91,7 +91,7 @@ const TestHistoryPage: React.FC = () => {
                                         <XAxis dataKey="date" hide />
                                         <YAxis domain={[0, 100]} hide />
                                         <Tooltip
-                                            contentStyle={{ bgcolor: "#0f172a", border: "1px solid #334155", borderRadius: 6 }}
+                                            contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 6 }}
                                             labelStyle={{ color: "#e2e8f0", fontSize: 12, fontWeight: 600 }}
                                             formatter={(value) => [`${value}%`, "Pass Rate"]}
                                         />

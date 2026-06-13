@@ -31,7 +31,6 @@ import {
   type EnvFilter,
   type DailyTrendPoint,
 } from "../services/apiService";
-import type { AreaItem } from "../types/Area";
 import type { AreasDashboardResponse, HealthBuckets } from "../types/Dashboard";
 import type { TestSearchResult } from "../types/TestSearch";
 

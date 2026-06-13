@@ -137,11 +137,11 @@ const AreaCard: React.FC<AreaCardProps> = ({
         {health && (
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5, mb: 1.5 }}>
             {([
-              { bucket: 'healthy', color: '#2e7d32', count: health.healthy },
-              { bucket: 'medium',  color: '#ed6c02', count: health.medium  },
-              { bucket: 'bad',     color: '#c62828', count: health.bad     },
-              { bucket: 'dead',    color: '#757575', count: health.dead    },
-            ] as const).map(({ bucket, color, count }) => (
+              { bucket: 'healthy', color: '#2e7d32', count: health.healthy, tip: 'Healthy: pass rate ≥ 80%' },
+              { bucket: 'medium',  color: '#ed6c02', count: health.medium,  tip: 'Medium: pass rate 20–79%' },
+              { bucket: 'bad',     color: '#c62828', count: health.bad,      tip: 'Bad: pass rate 1–19%' },
+              { bucket: 'dead',    color: '#757575', count: health.dead,     tip: 'Dead: test not pass' },
+            ] as const).map(({ bucket, color, count, tip }) => (
               <Box
                 key={bucket}
                 onClick={(e) => { e.stopPropagation(); navigate(`/health/${areaName}/${bucket}?env=${env}`); }}
@@ -152,14 +152,36 @@ const AreaCard: React.FC<AreaCardProps> = ({
                 }}
               >
                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
-                <Typography
-                  className="bucket-label"
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ transition: 'color 0.15s' }}
+                <Tooltip
+                  title={tip}
+                  arrow
+                  placement="top"
+                  slotProps={{
+                    tooltip: {
+                      sx: {
+                        bgcolor: '#1e293b',
+                        color: '#e2e8f0',
+                        fontSize: '0.72rem',
+                        fontWeight: 500,
+                        border: '1px solid #334155',
+                        borderRadius: 1.5,
+                        px: 1.25,
+                        py: 0.75,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                      },
+                    },
+                    arrow: { sx: { color: '#1e293b', '&::before': { border: '1px solid #334155' } } },
+                  }}
                 >
-                  {bucket.charAt(0).toUpperCase() + bucket.slice(1)}: {count}
-                </Typography>
+                  <Typography
+                    className="bucket-label"
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ transition: 'color 0.15s' }}
+                  >
+                    {bucket.charAt(0).toUpperCase() + bucket.slice(1)}: {count}
+                  </Typography>
+                </Tooltip>
               </Box>
             ))}
           </Box>

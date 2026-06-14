@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Box, Typography, Button, Select, MenuItem,
+  Box, Typography, Button,
   Collapse, ToggleButtonGroup, ToggleButton, Paper, Skeleton, Alert,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -219,7 +219,6 @@ const RecentFailuresPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"failCount" | "lastFailedOn">("failCount");
 
   const [latestData, setLatestData] = useState<LatestFailedTestsResponse | null>(null);
   const [latestLoading, setLatestLoading] = useState(false);
@@ -279,13 +278,9 @@ const RecentFailuresPage: React.FC = () => {
       const q = search.toLowerCase();
       list = list.filter(i => i.testName.toLowerCase().includes(q));
     }
-    list.sort((a, b) =>
-      sortBy === "failCount"
-        ? b.failCount - a.failCount
-        : (b.lastFailedOn ?? "").localeCompare(a.lastFailedOn ?? "")
-    );
+    list.sort((a, b) => b.failCount - a.failCount);
     return list;
-  }, [data, search, sortBy])();
+  }, [data, search])();
 
   // Group failures by Jenkins job name (for the "By Job" tab).
   const jobGroups = React.useMemo(() => {
@@ -421,16 +416,7 @@ const RecentFailuresPage: React.FC = () => {
             {!loading && !error && data && data.items.length > 0 && (
               <>
                 <Box sx={{ display: "flex", gap: 1.5, mb: 2.5, flexWrap: "wrap", alignItems: "center" }}>
-                  <Select
-                    size="small"
-                    value={sortBy}
-                    onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                    sx={{ fontSize: 13, minWidth: 190 }}
-                  >
-                    <MenuItem value="failCount">Sort: failure count</MenuItem>
-                    <MenuItem value="lastFailedOn">Sort: last failed</MenuItem>
-                  </Select>
-                  <Typography variant="body2" sx={{ color: "#94a3b8" }}>{items.length} results</Typography>
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>{items.length} results</Typography>
                 </Box>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}>
                   {items.map((item, i) => (

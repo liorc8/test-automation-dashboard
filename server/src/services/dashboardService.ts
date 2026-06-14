@@ -53,26 +53,25 @@ test_health AS (
     l.TESTEDON,
     NVL(p.SUCCESSES, 0) AS SUCCESSES,
     NVL(p.FAILS, 0)     AS FAILS,
+    -- Single PASS_RATE expression, identical to areaHealthTestsService, so the
+    -- per-area bucket counts here match the rows listed in the detail view.
     CASE
-      WHEN NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0) = 0 THEN 'dead'
-      WHEN ROUND(NVL(p.SUCCESSES, 0) * 100 / (NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0))) > 80 THEN 'healthy'
-      WHEN ROUND(NVL(p.SUCCESSES, 0) * 100 / (NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0))) > 20 THEN 'medium'
-      WHEN ROUND(NVL(p.SUCCESSES, 0) * 100 / (NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0))) > 0  THEN 'bad'
-      ELSE 'dead'
-    END AS HEALTH
+      WHEN NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0) = 0 THEN 0
+      ELSE ROUND(NVL(p.SUCCESSES, 0) * 100 / (NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0)))
+    END AS PASS_RATE
   FROM latest l
   LEFT JOIN pass_rate_per_test p ON p.AREA = l.AREA AND p.TESTNAME = l.TESTNAME
 ),
 area_agg AS (
   SELECT
     AREA,
-    COUNT(*)                                                                                        AS TOTAL,
+    COUNT(DISTINCT TESTNAME)                                                                      AS TOTAL,
     SUM(CASE WHEN LOWER(PASSED)='true'  THEN 1 ELSE 0 END)                                        AS LAST_PASSED,
     SUM(CASE WHEN LOWER(PASSED)='false' AND FAILURETEXT NOT LIKE '%@BeforeMethod%' THEN 1 ELSE 0 END) AS LAST_FAILED,
-    SUM(CASE WHEN HEALTH = 'healthy' THEN 1 ELSE 0 END)                                           AS HEALTHY_COUNT,
-    SUM(CASE WHEN HEALTH = 'medium'  THEN 1 ELSE 0 END)                                           AS MEDIUM_COUNT,
-    SUM(CASE WHEN HEALTH = 'bad'     THEN 1 ELSE 0 END)                                           AS BAD_COUNT,
-    SUM(CASE WHEN HEALTH = 'dead'    THEN 1 ELSE 0 END)                                           AS DEAD_COUNT
+    COUNT(DISTINCT CASE WHEN PASS_RATE > 80                      THEN TESTNAME END)               AS HEALTHY_COUNT,
+    COUNT(DISTINCT CASE WHEN PASS_RATE > 20 AND PASS_RATE <= 80  THEN TESTNAME END)               AS MEDIUM_COUNT,
+    COUNT(DISTINCT CASE WHEN PASS_RATE > 0  AND PASS_RATE <= 20  THEN TESTNAME END)               AS BAD_COUNT,
+    COUNT(DISTINCT CASE WHEN PASS_RATE = 0                       THEN TESTNAME END)               AS DEAD_COUNT
   FROM test_health
   GROUP BY AREA
 )

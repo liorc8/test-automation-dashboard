@@ -106,7 +106,9 @@ const DashboardPage: React.FC = () => {
           };
         });
 
-        setCards([...vm].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })));
+        // Hide areas with no tests in the current window.
+        const visible = vm.filter((c) => c.total > 0);
+        setCards(visible.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load dashboard");
       } finally {

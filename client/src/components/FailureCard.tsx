@@ -45,9 +45,10 @@ interface ReasonBlockProps {
   label: string;
   testName: string;
   onExpandLog: (lines: string[], label: string) => void;
+  extraActions?: React.ReactNode;
 }
 
-const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onExpandLog }) => {
+const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onExpandLog, extraActions }) => {
   const previewLines = extractFatalPreview(reason.text ?? "");
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -83,6 +84,7 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onEx
             Full Log
           </Button>
         )}
+        {extraActions}
       </Box>
     </Box>
   );
@@ -106,6 +108,43 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
   const extra = item.reasons.slice(1, 3);
   const screenshotSrc = item.reasons[0]?.screenshotLink ?? item.lastFailure.screenshotLink ?? null;
   const color = severityColor(item.failCount);
+
+  // History + TestRail, rendered alongside Expand Log / Full Log in a single row.
+  const actionButtons = (
+    <>
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<HistoryIcon sx={{ fontSize: "13px !important" }} />}
+        onClick={onOpenHistory}
+        sx={{
+          borderColor: "#cbd5e1", color: "#475569", fontSize: 11, textTransform: "none",
+          py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
+          "&:hover": { borderColor: "#94a3b8", bgcolor: "background.paper", color: "text.primary" },
+        }}
+      >
+        History
+      </Button>
+      {testRailUrl && (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<OpenInNewIcon sx={{ fontSize: "13px !important" }} />}
+          href={testRailUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          sx={{
+            borderColor: "#cbd5e1", color: "#475569", fontSize: 11, textTransform: "none",
+            py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
+            "&:hover": { borderColor: "#94a3b8", bgcolor: "background.paper", color: "text.primary" },
+          }}
+        >
+          TestRail
+        </Button>
+      )}
+    </>
+  );
 
   return (
     <Card
@@ -139,24 +178,6 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
           <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, fontWeight: 600, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all", lineHeight: 1.5 }}>
             {item.testName}
           </Typography>
-          {testRailUrl && (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<OpenInNewIcon sx={{ fontSize: "13px !important" }} />}
-              href={testRailUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              sx={{
-                borderColor: "#cbd5e1", color: "#475569", fontSize: 11, textTransform: "none",
-                py: "2px", px: "8px", minHeight: 0, lineHeight: 1.4, flexShrink: 0,
-                "&:hover": { borderColor: "#94a3b8", bgcolor: "#f8fafc", color: "text.primary" },
-              }}
-            >
-              TR
-            </Button>
-          )}
           <TestNoteButton areaName={areaName} testName={item.testName} />
           {item.lastFailure.server && (
             <Chip label={`🖥️ ${item.lastFailure.server}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "text.secondary", borderColor: "divider", flexShrink: 0 }} />
@@ -172,8 +193,9 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
         {/* Local note */}
         <TestNoteDisplay areaName={areaName} testName={item.testName} />
 
-        {/* Primary reason */}
-        {primary && (
+        {/* Primary reason — its action row also hosts History + TestRail so all
+            buttons (Expand Log, Full Log, History, TR) sit side by side. */}
+        {primary ? (
           <Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.875 }}>
               <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.07em" }}>
@@ -186,32 +208,14 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
               )}
             </Box>
             <ReasonBlock reason={primary} label="Primary Reason" testName={item.testName}
-              onExpandLog={(lines, label) => onExpandLog(lines, item.testName, label)} />
+              onExpandLog={(lines, label) => onExpandLog(lines, item.testName, label)}
+              extraActions={actionButtons} />
+          </Box>
+        ) : (
+          <Box sx={{ display: "flex", gap: 0.875, flexWrap: "wrap", pt: 0.5 }}>
+            {actionButtons}
           </Box>
         )}
-
-        {/* Action button group */}
-        <Box sx={{ display: "flex", gap: 0.875, flexWrap: "wrap", pt: 0.5 }}>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<HistoryIcon sx={{ fontSize: "13px !important" }} />}
-            onClick={onOpenHistory}
-            sx={{
-              borderColor: "#cbd5e1",
-              color: "#475569",
-              fontSize: 11,
-              textTransform: "none",
-              py: "3px",
-              px: "10px",
-              minHeight: 0,
-              lineHeight: 1.4,
-              "&:hover": { borderColor: "#94a3b8", bgcolor: "#fff", color: "text.primary" },
-            }}
-          >
-            History
-          </Button>
-        </Box>
 
         {/* Additional reasons */}
         {extra.length > 0 && (

@@ -24,6 +24,9 @@ function bucketWhereClause(bucket: HealthBucket): string {
 }
 
 function buildSQL(serverFilter: string, bucket: HealthBucket): string {
+  // Same daysBack window as the dashboard so the per-area bucket counts shown on the
+  // cards match the rows listed here exactly.
+  const windowFilter = "AND TRUNC(TESTEDON) >= TRUNC(SYSDATE) - :daysBack + 1";
   return `
 WITH latest_per_test AS (
   SELECT
@@ -39,6 +42,7 @@ WITH latest_per_test AS (
     ) AS RN
   FROM QA_AUTOMATION.TESTRESULTS
   WHERE UPPER(AREA) = UPPER(:area)
+    ${windowFilter}
     ${serverFilter}
 ),
 latest AS (
@@ -56,6 +60,7 @@ pass_rate_per_test AS (
     MAX(CASE WHEN LOWER(PASSED)='false' THEN TESTEDON END) AS LAST_FAILURE
   FROM QA_AUTOMATION.TESTRESULTS
   WHERE UPPER(AREA) = UPPER(:area)
+    ${windowFilter}
     ${serverFilter}
   GROUP BY UPPER(AREA), UPPER(TESTNAME)
 ),
@@ -82,15 +87,19 @@ ORDER BY PASS_RATE ASC, TESTNAME ASC
 `;
 }
 
+// Default window mirrors the dashboard (getAreasDashboard) so counts stay consistent.
+const DEFAULT_DAYS_BACK = 8;
+
 export async function getAreaHealthTests(
   areaName: string,
   bucket: HealthBucket,
-  env: EnvFilter = "qa"
+  env: EnvFilter = "qa",
+  daysBack: number = DEFAULT_DAYS_BACK
 ): Promise<HealthTestItem[]> {
   const serverFilter = buildServerFilter(env);
   const sql = buildSQL(serverFilter, bucket);
 
-  const res = await execute(sql, { area: areaName });
+  const res = await execute(sql, { area: areaName, daysBack });
   const rows = (res.rows ?? []) as any[];
 
   return rows.map((r) => ({

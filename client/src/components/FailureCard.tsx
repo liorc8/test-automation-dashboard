@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Typography, Button, Card, CardContent, Chip, Collapse } from "@mui/material";
+import { Box, Typography, Button, Card, CardContent, Chip, Collapse, CircularProgress } from "@mui/material";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -15,6 +15,7 @@ import {
   dateOnly,
   severityColor,
 } from "./failureHelpers";
+import { getExpandedLog } from "../services/apiService";
 import type { RecentFailureGroupedItem, ReasonEntry } from "../types/RecentFailuresGrouped";
 import type { LatestFailedTestItem } from "../types/LatestFailed";
 
@@ -50,6 +51,26 @@ interface ReasonBlockProps {
 
 const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onExpandLog, extraActions }) => {
   const previewLines = extractFatalPreview(reason.text ?? "");
+  const [logLoading, setLogLoading] = useState(false);
+
+  const handleExpandLog = async () => {
+    // No remote log link — fall back to the locally stored failure text.
+    if (!reason.logLink) {
+      onExpandLog(truncateLogToTestScope(reason.text, testName), label);
+      return;
+    }
+    setLogLoading(true);
+    try {
+      const res = await getExpandedLog(reason.logLink, testName);
+      if (res.available) onExpandLog(res.lines, label);
+      else onExpandLog([res.error], label);
+    } catch (e) {
+      onExpandLog([e instanceof Error ? e.message : "Failed to load log."], label);
+    } finally {
+      setLogLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
       <Box sx={{ bgcolor: "#000000", borderRadius: 2, border: "1px solid #1e293b", overflow: "hidden" }}>
@@ -62,14 +83,17 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onEx
       <Box sx={{ display: "flex", gap: 0.875, flexWrap: "wrap" }}>
         <Button
           size="small" variant="outlined"
-          startIcon={<TerminalIcon sx={{ fontSize: "13px !important" }} />}
-          onClick={() => onExpandLog(truncateLogToTestScope(reason.text, testName), label)}
+          disabled={logLoading}
+          startIcon={logLoading
+            ? <CircularProgress size={12} sx={{ color: "inherit" }} />
+            : <TerminalIcon sx={{ fontSize: "13px !important" }} />}
+          onClick={handleExpandLog}
           sx={{
             borderColor: "#334155", color: "text.secondary", fontSize: 11, textTransform: "none", py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
             "&:hover": { borderColor: "#64748b", color: "#e2e8f0", bgcolor: "#1e293b" }
           }}
         >
-          Expand Log
+          {logLoading ? "Loading…" : "Expand Log"}
         </Button>
         {reason.logLink && (
           <Button

@@ -157,6 +157,19 @@ export const getAreaRecentFailuresGrouped = async (
   return handleResponse<AreaRecentFailuresGroupedResponse>(response);
 };
 
+export type ExpandLogResponse =
+  | { available: true; lines: string[]; source: "parsed" | "fallback" }
+  | { available: false; error: string };
+
+export const getExpandedLog = async (
+  logUrl: string,
+  testName: string
+): Promise<ExpandLogResponse> => {
+  const url = `${API_BASE_URL}/logs/expand?logUrl=${encodeURIComponent(logUrl)}&testName=${encodeURIComponent(testName)}`;
+  const response = await fetch(url);
+  return handleResponse<ExpandLogResponse>(response);
+};
+
 export const getAreaFailuresByReason = async (
   areaName: string,
   windowDays: number = 10,

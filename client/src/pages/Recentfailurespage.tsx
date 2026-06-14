@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Box, Typography, Button, Select, MenuItem,
+  Box, Typography, Button,
   Collapse, ToggleButtonGroup, ToggleButton, Paper, Skeleton, Alert,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -15,13 +15,15 @@ import FailureCard, { latestFailedToGroupedItem } from "../components/FailureCar
 import FailureRowList from "../components/FailureRowList";
 import TestNoteButton from "../components/TestNoteButton";
 import TestNoteDisplay from "../components/TestNoteDisplay";
+import ByReasonView from "../components/ByReasonView";
 import ImageModal from "../components/ImageModal";
 import LogModal from "../components/LogModal";
 import { WINDOW_DAYS } from "../components/failureHelpers";
-import { getAreaRecentFailuresGrouped, getAreaLatestFailedTests } from "../services/apiService";
+import { getAreaRecentFailuresGrouped, getAreaLatestFailedTests, getAreaFailuresByReason } from "../services/apiService";
 import type { EnvFilter } from "../services/apiService";
 import type { AreaRecentFailuresGroupedResponse, RecentFailureGroupedItem } from "../types/RecentFailuresGrouped";
 import type { LatestFailedTestsResponse } from "../types/LatestFailed";
+import type { AreaFailuresByReasonResponse } from "../types/FailuresByReason";
 
 const LIMIT = 200;
 
@@ -219,12 +221,16 @@ const RecentFailuresPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"failCount" | "lastFailedOn">("failCount");
 
   const [latestData, setLatestData] = useState<LatestFailedTestsResponse | null>(null);
   const [latestLoading, setLatestLoading] = useState(false);
   const [latestError, setLatestError] = useState("");
   const [latestFetched, setLatestFetched] = useState(false);
+
+  const [reasonData, setReasonData] = useState<AreaFailuresByReasonResponse | null>(null);
+  const [reasonLoading, setReasonLoading] = useState(false);
+  const [reasonError, setReasonError] = useState("");
+  const [reasonFetched, setReasonFetched] = useState(false);
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
@@ -241,7 +247,7 @@ const RecentFailuresPage: React.FC = () => {
   // Restore tab state from URL query parameter
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam === '0' || tabParam === '1' || tabParam === '2') {
+    if (tabParam === '0' || tabParam === '1' || tabParam === '2' || tabParam === '3') {
       setActiveTab(Number(tabParam));
     }
   }, []);
@@ -260,7 +266,20 @@ const RecentFailuresPage: React.FC = () => {
     setLatestFetched(false);
     setLatestData(null);
     setLatestError("");
+    setReasonFetched(false);
+    setReasonData(null);
+    setReasonError("");
   }, [areaName, env]);
+
+  useEffect(() => {
+    if (activeTab !== 3 || reasonFetched || !areaName) return;
+    setReasonLoading(true);
+    setReasonError("");
+    getAreaFailuresByReason(areaName, WINDOW_DAYS, env)
+      .then(d => { setReasonData(d); setReasonFetched(true); })
+      .catch(e => setReasonError(e instanceof Error ? e.message : "Failed to load failures by reason"))
+      .finally(() => setReasonLoading(false));
+  }, [activeTab, reasonFetched, areaName, env]);
 
   useEffect(() => {
     if (activeTab !== 1 || latestFetched || !areaName) return;
@@ -279,13 +298,9 @@ const RecentFailuresPage: React.FC = () => {
       const q = search.toLowerCase();
       list = list.filter(i => i.testName.toLowerCase().includes(q));
     }
-    list.sort((a, b) =>
-      sortBy === "failCount"
-        ? b.failCount - a.failCount
-        : (b.lastFailedOn ?? "").localeCompare(a.lastFailedOn ?? "")
-    );
+    list.sort((a, b) => b.failCount - a.failCount);
     return list;
-  }, [data, search, sortBy])();
+  }, [data, search])();
 
   // Group failures by Jenkins job name (for the "By Job" tab).
   const jobGroups = React.useMemo(() => {
@@ -340,7 +355,9 @@ const RecentFailuresPage: React.FC = () => {
                 ? `latest status · ${env.toUpperCase()}`
                 : activeTab === 2
                   ? `grouped by job · last ${WINDOW_DAYS} days · ${env.toUpperCase()}`
-                  : `last ${WINDOW_DAYS} days · ${env.toUpperCase()}`}
+                  : activeTab === 3
+                    ? `shared reasons · last ${WINDOW_DAYS} days · ${env.toUpperCase()}`
+                    : `last ${WINDOW_DAYS} days · ${env.toUpperCase()}`}
             </Typography>
           </Box>
         </Box>
@@ -361,6 +378,12 @@ const RecentFailuresPage: React.FC = () => {
           <Box sx={{ bgcolor: "background.default", border: 1, borderColor: "divider", borderRadius: 2.5, px: 2.25, py: 0.75, textAlign: "center" }}>
             <Typography sx={{ fontSize: 20, fontWeight: 800, color: "text.primary" }}>{jobGroups.length}</Typography>
             <Typography sx={{ fontSize: 11, color: "text.secondary" }}>jobs</Typography>
+          </Box>
+        )}
+        {activeTab === 3 && reasonData && (
+          <Box sx={{ bgcolor: "background.default", border: 1, borderColor: "divider", borderRadius: 2.5, px: 2.25, py: 0.75, textAlign: "center" }}>
+            <Typography sx={{ fontSize: 20, fontWeight: 800, color: "text.primary" }}>{reasonData.reasons.length}</Typography>
+            <Typography sx={{ fontSize: 11, color: "text.secondary" }}>reasons</Typography>
           </Box>
         )}
         <ThemeToggle />
@@ -394,6 +417,7 @@ const RecentFailuresPage: React.FC = () => {
           <ToggleButton value={0}>All</ToggleButton>
           <ToggleButton value={1}>By Server</ToggleButton>
           <ToggleButton value={2}>By Job</ToggleButton>
+          <ToggleButton value={3}>By Reason</ToggleButton>
         </ToggleButtonGroup>
 
         <SearchInput
@@ -421,16 +445,7 @@ const RecentFailuresPage: React.FC = () => {
             {!loading && !error && data && data.items.length > 0 && (
               <>
                 <Box sx={{ display: "flex", gap: 1.5, mb: 2.5, flexWrap: "wrap", alignItems: "center" }}>
-                  <Select
-                    size="small"
-                    value={sortBy}
-                    onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                    sx={{ fontSize: 13, minWidth: 190 }}
-                  >
-                    <MenuItem value="failCount">Sort: failure count</MenuItem>
-                    <MenuItem value="lastFailedOn">Sort: last failed</MenuItem>
-                  </Select>
-                  <Typography variant="body2" sx={{ color: "#94a3b8" }}>{items.length} results</Typography>
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>{items.length} results</Typography>
                 </Box>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}>
                   {items.map((item, i) => (
@@ -518,6 +533,31 @@ const RecentFailuresPage: React.FC = () => {
                   </Box>
                 ))}
               </Box>
+            )}
+          </>
+        )}
+
+        {/* Tab 3: Grouped by shared reason */}
+        {activeTab === 3 && (
+          <>
+            {reasonLoading && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={120} />)}
+              </Box>
+            )}
+            {!reasonLoading && reasonError && <Alert severity="error">{reasonError}</Alert>}
+            {!reasonLoading && !reasonError && reasonData && reasonData.reasons.length === 0 && (
+              <Alert severity="success">🎉 No reasons affecting multiple tests in the last {WINDOW_DAYS} days!</Alert>
+            )}
+            {!reasonLoading && !reasonError && reasonData && reasonData.reasons.length > 0 && (
+              <ByReasonView
+                reasons={reasonData.reasons}
+                areaName={areaName}
+                onImageClick={setImageSrc}
+                onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
+                onOpenHistory={openTestHistory}
+                testRailUrlFor={testRailUrlFor}
+              />
             )}
           </>
         )}

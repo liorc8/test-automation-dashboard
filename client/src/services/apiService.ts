@@ -3,6 +3,7 @@ import type { AreaItem } from "../types/Area";
 import type { AreaHealthResponse, EnvHealthResponse } from "../types/Health";
 import type { AreasDashboardResponse } from "../types/Dashboard";
 import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped";
+import type { AreaFailuresByReasonResponse } from "../types/FailuresByReason";
 import type { LatestFailedTestsResponse } from "../types/LatestFailed";
 import type { CommonFailuresResponse } from "../types/CommonFailures";
 import type { TestSearchResult } from "../types/TestSearch";
@@ -154,6 +155,29 @@ export const getAreaRecentFailuresGrouped = async (
   const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/recent-failures-grouped?windowDays=${windowDays}&limit=${limit}&env=${env}`;
   const response = await fetch(url);
   return handleResponse<AreaRecentFailuresGroupedResponse>(response);
+};
+
+export type ExpandLogResponse =
+  | { available: true; lines: string[]; source: "parsed" | "fallback" }
+  | { available: false; error: string };
+
+export const getExpandedLog = async (
+  logUrl: string,
+  testName: string
+): Promise<ExpandLogResponse> => {
+  const url = `${API_BASE_URL}/logs/expand?logUrl=${encodeURIComponent(logUrl)}&testName=${encodeURIComponent(testName)}`;
+  const response = await fetch(url);
+  return handleResponse<ExpandLogResponse>(response);
+};
+
+export const getAreaFailuresByReason = async (
+  areaName: string,
+  windowDays: number = 10,
+  env: EnvFilter = "qa"
+): Promise<AreaFailuresByReasonResponse> => {
+  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/failures-by-reason?windowDays=${windowDays}&env=${env}`;
+  const response = await fetch(url);
+  return handleResponse<AreaFailuresByReasonResponse>(response);
 };
 
 export const getAreaLatestFailedTests = async (

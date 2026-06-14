@@ -6,6 +6,7 @@ import testResultsRoutes from "./routes/testResultsRoutes";
 import areasRoutes from "./routes/areasRoutes";
 import envsRoutes from "./routes/envsRoutes";
 import commonRoutes from "./routes/commonRoutes";
+import logsRoutes from "./routes/logsRoutes";
 import { checkConnection, closePool } from "./db";
 
 dotenv.config();
@@ -20,6 +21,7 @@ app.use("/api/test-results", testResultsRoutes);
 app.use("/api/areas", areasRoutes);
 app.use("/api/envs", envsRoutes);
 app.use("/api/common-failures", commonRoutes);
+app.use("/api/logs", logsRoutes);
 
 app.get("/health", (req: Request, res: Response) => {
   res.json({ status: "OK", system: "Automation Dashboard Backend" });

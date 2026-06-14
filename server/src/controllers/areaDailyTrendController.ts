@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AREAS } from "../config/areas";
+import { isKnownArea } from "../services/areasService";
 import { getAreaDailyTrend } from "../services/areaDailyTrendService";
 import { EnvFilter } from "../services/envFilter";
 
@@ -7,8 +7,8 @@ export const getAreaDailyTrendHandler = async (req: Request, res: Response) => {
   try {
     const { areaName } = req.params;
 
-    const isKnownArea = AREAS.some((a) => a.id === areaName);
-    if (!isKnownArea) return res.status(404).json({ error: `Unknown areaId: ${areaName}` });
+    const known = await isKnownArea(areaName);
+    if (!known) return res.status(404).json({ error: `Unknown areaId: ${areaName}` });
 
     const daysBackRaw = req.query.daysBack as string | undefined;
     const daysBack = daysBackRaw ? Number(daysBackRaw) : 8;

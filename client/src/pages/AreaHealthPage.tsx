@@ -1,15 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Box, Typography, Button, TextField, Paper,
+  Box, Typography, Button, Paper,
   Table, TableHead, TableBody, TableRow, TableCell,
-  TableContainer, LinearProgress, Alert, Skeleton,
-  InputAdornment,
+  TableContainer, LinearProgress, Alert, Skeleton, Collapse, CircularProgress,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import SearchIcon from "@mui/icons-material/Search";
 import HistoryIcon from "@mui/icons-material/History";
-import { getAreaHealthTests, type HealthBucket, type HealthTestItem } from "../services/apiService";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import SearchInput from "../components/SearchInput";
+import FailureCard, { latestFailedToGroupedItem } from "../components/FailureCard";
+import ImageModal from "../components/ImageModal";
+import LogModal from "../components/LogModal";
+import ThemeToggle from "../components/ThemeToggle";
+import { useTestRailIds } from "../hooks/useTestRailIds";
+import {
+  getAreaHealthTests, getAreaLatestFailedTests,
+  type HealthBucket, type HealthTestItem, type EnvFilter,
+} from "../services/apiService";
+import type { LatestFailedTestItem, LatestFailedTestsResponse } from "../types/LatestFailed";
 
 const BUCKET_COLOR: Record<HealthBucket, string> = {
   healthy: "#2e7d32",
@@ -32,6 +41,8 @@ const BUCKET_BORDER: Record<HealthBucket, string> = {
   dead: "#e0e0e0",
 };
 
+const COLUMNS = ["Test Name", "Pass Rate", "Successes", "Failures", "Last Success", "Last Failure", "History"];
+
 const isValidBucket = (b: string | undefined): b is HealthBucket =>
   b === "healthy" || b === "medium" || b === "bad" || b === "dead";
 
@@ -44,12 +55,22 @@ const AreaHealthPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const env = (searchParams.get("env") ?? "qa") as "qa" | "release" | "sandbox";
+  const env = (searchParams.get("env") ?? "qa") as EnvFilter;
 
   const [tests, setTests] = useState<HealthTestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+
+  // Row expansion + lazy-loaded failure details for the open row.
+  const [openTestName, setOpenTestName] = useState<string | null>(null);
+  const [latestData, setLatestData] = useState<LatestFailedTestsResponse | null>(null);
+  const [latestLoading, setLatestLoading] = useState(false);
+
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
+
+  const { urlFor: testRailUrlFor } = useTestRailIds(areaName, env);
 
   useEffect(() => {
     if (!areaName || !isValidBucket(bucket)) return;
@@ -67,6 +88,41 @@ const AreaHealthPage: React.FC = () => {
     };
     load();
   }, [areaName, bucket, env]);
+
+  // Reset expansion + cached failure details when the area/bucket/env changes.
+  useEffect(() => {
+    setOpenTestName(null);
+    setLatestData(null);
+  }, [areaName, bucket, env]);
+
+  const handleRowClick = async (testName: string) => {
+    if (openTestName === testName) {
+      setOpenTestName(null);
+      return;
+    }
+    setOpenTestName(testName);
+    if (!latestData && areaName && !latestLoading) {
+      try {
+        setLatestLoading(true);
+        const d = await getAreaLatestFailedTests(areaName, env);
+        setLatestData(d);
+      } catch {
+        setLatestData({ area: areaName ?? "", env, totalCount: 0, servers: [] });
+      } finally {
+        setLatestLoading(false);
+      }
+    }
+  };
+
+  const findLatestFailure = (testName: string): LatestFailedTestItem | null => {
+    if (!latestData) return null;
+    const key = testName.toLowerCase();
+    for (const sg of latestData.servers) {
+      const match = sg.tests.find(t => t.testName.toLowerCase() === key);
+      if (match) return match;
+    }
+    return null;
+  };
 
   if (!isValidBucket(bucket)) {
     return (
@@ -86,11 +142,16 @@ const AreaHealthPage: React.FC = () => {
     : tests;
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+      {imageSrc && <ImageModal src={imageSrc} onClose={() => setImageSrc(null)} />}
+      {logModal && (
+        <LogModal lines={logModal.lines} testName={logModal.testName} reasonLabel={logModal.label}
+          onClose={() => setLogModal(null)} />
+      )}
 
       {/* ── Sticky header ── */}
       <Box component="header" sx={{
-        bgcolor: "#fff", borderBottom: "1px solid #e5e7eb",
+        bgcolor: "background.paper", borderBottom: 1, borderColor: "divider",
         px: 4, py: 1.75,
         display: "flex", alignItems: "center", gap: 2,
         position: "sticky", top: 0, zIndex: 100,
@@ -101,14 +162,14 @@ const AreaHealthPage: React.FC = () => {
           size="small"
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/")}
-          sx={{ borderColor: "#e2e8f0", color: "#64748b", textTransform: "none", "&:hover": { borderColor: "#cbd5e1" } }}
+          sx={{ borderColor: "#e2e8f0", color: "text.secondary", textTransform: "none", "&:hover": { borderColor: "#cbd5e1" } }}
         >
           Dashboard
         </Button>
 
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-            <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 18, fontWeight: 800, color: "#1e293b" }}>
+            <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 18, fontWeight: 800, color: "text.primary" }}>
               {areaName}
             </Typography>
             <Box component="span" sx={{ bgcolor: bg, border: `1px solid ${border}`, color, borderRadius: 20, px: 1.5, py: "2px", fontSize: 12, fontWeight: 700 }}>
@@ -126,6 +187,7 @@ const AreaHealthPage: React.FC = () => {
             <Typography sx={{ fontSize: 11, color }}>{label.toLowerCase()} tests</Typography>
           </Box>
         )}
+        <ThemeToggle />
       </Box>
 
       {/* ── Content ── */}
@@ -150,19 +212,10 @@ const AreaHealthPage: React.FC = () => {
           <>
             {/* Search bar */}
             <Box sx={{ display: "flex", gap: 1.5, mb: 2.5, alignItems: "center" }}>
-              <TextField
-                size="small"
-                placeholder="Search by test name…"
+              <SearchInput
                 value={search}
-                onChange={e => setSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" sx={{ color: "text.disabled" }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ maxWidth: 480, flex: 1, "& .MuiOutlinedInput-root": { bgcolor: "#fff" } }}
+                onChange={setSearch}
+                sx={{ maxWidth: 480, flex: 1 }}
               />
               <Typography variant="body2" sx={{ color: "#94a3b8" }}>{filtered.length} results</Typography>
             </Box>
@@ -175,8 +228,8 @@ const AreaHealthPage: React.FC = () => {
             >
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "#f8fafc" }}>
-                    {["Test Name", "Pass Rate", "Successes", "Failures", "Last Run", "History"].map((h, i) => (
+                  <TableRow sx={{ bgcolor: "background.default" }}>
+                    {COLUMNS.map((h, i) => (
                       <TableCell
                         key={h}
                         align={i === 0 ? "left" : "center"}
@@ -190,63 +243,114 @@ const AreaHealthPage: React.FC = () => {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 5, color: "#94a3b8" }}>
+                      <TableCell colSpan={COLUMNS.length} align="center" sx={{ py: 5, color: "#94a3b8" }}>
                         No tests found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map(t => (
-                      <TableRow
-                        key={t.testName}
-                        sx={{ "&:hover": { bgcolor: "#f8fafc" }, "&:last-child td": { borderBottom: 0 } }}
-                      >
-                        <TableCell sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "#1e293b", wordBreak: "break-all" }}>
-                          {t.testName}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
-                            <Typography sx={{ fontWeight: 700, color, fontSize: 14 }}>{t.passRate}%</Typography>
-                            <LinearProgress
-                              variant="determinate"
-                              value={t.passRate}
-                              sx={{
-                                width: 80, height: 4, borderRadius: 1,
-                                bgcolor: "#e5e7eb",
-                                "& .MuiLinearProgress-bar": { bgcolor: color, borderRadius: 1 },
-                              }}
-                            />
-                          </Box>
-                        </TableCell>
-                        <TableCell align="center" sx={{ color: "#2e7d32", fontWeight: 600, fontSize: 13 }}>
-                          {t.successes}
-                        </TableCell>
-                        <TableCell align="center" sx={{ color: "#c62828", fontWeight: 600, fontSize: 13 }}>
-                          {t.fails}
-                        </TableCell>
-                        <TableCell align="center" sx={{ fontSize: 12, color: "#94a3b8" }}>
-                          {t.lastRunDate}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<HistoryIcon sx={{ fontSize: 14 }} />}
-                            onClick={() => openTestHistory(t.testName)}
+                    filtered.map(t => {
+                      const isOpen = openTestName === t.testName;
+                      const failure = isOpen ? findLatestFailure(t.testName) : null;
+                      return (
+                        <React.Fragment key={t.testName}>
+                          <TableRow
+                            onClick={() => handleRowClick(t.testName)}
                             sx={{
-                              borderColor: "#e2e8f0",
-                              color: "#475569",
-                              textTransform: "none",
-                              fontSize: 11,
-                              px: 1.25,
-                              py: 0.5,
-                              "&:hover": { borderColor: "#cbd5e1", bgcolor: "#f8fafc", color: "#0f172a" },
+                              cursor: "pointer",
+                              bgcolor: isOpen ? "action.hover" : "transparent",
+                              "&:hover": { bgcolor: "action.hover" },
+                              "& td": { borderBottom: isOpen ? "none" : undefined },
                             }}
                           >
-                            History
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                            <TableCell sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", wordBreak: "break-all" }}>
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                <KeyboardArrowDownIcon sx={{
+                                  fontSize: 18, color: isOpen ? "#475569" : "#cbd5e1", flexShrink: 0,
+                                  transition: "transform 0.22s ease",
+                                  transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                                }} />
+                                {t.testName}
+                              </Box>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
+                                <Typography sx={{ fontWeight: 700, color, fontSize: 14 }}>{t.passRate}%</Typography>
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={t.passRate}
+                                  sx={{
+                                    width: 80, height: 4, borderRadius: 1,
+                                    bgcolor: "#e5e7eb",
+                                    "& .MuiLinearProgress-bar": { bgcolor: color, borderRadius: 1 },
+                                  }}
+                                />
+                              </Box>
+                            </TableCell>
+                            <TableCell align="center" sx={{ color: "#2e7d32", fontWeight: 600, fontSize: 13 }}>
+                              {t.successes}
+                            </TableCell>
+                            <TableCell align="center" sx={{ color: "#c62828", fontWeight: 600, fontSize: 13 }}>
+                              {t.fails}
+                            </TableCell>
+                            <TableCell align="center" sx={{ fontSize: 12, color: "text.secondary" }}>
+                              {t.lastSuccess || "—"}
+                            </TableCell>
+                            <TableCell align="center" sx={{ fontSize: 12, color: "text.secondary" }}>
+                              {t.lastFailure || "—"}
+                            </TableCell>
+                            <TableCell align="center">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<HistoryIcon sx={{ fontSize: 14 }} />}
+                                onClick={(e) => { e.stopPropagation(); openTestHistory(t.testName); }}
+                                sx={{
+                                  borderColor: "#e2e8f0",
+                                  color: "#475569",
+                                  textTransform: "none",
+                                  fontSize: 11,
+                                  px: 1.25,
+                                  py: 0.5,
+                                  "&:hover": { borderColor: "#cbd5e1", bgcolor: "#f8fafc", color: "#0f172a" },
+                                }}
+                              >
+                                History
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={COLUMNS.length} sx={{ p: 0, borderBottom: isOpen ? "1px solid #e2e8f0" : "none" }}>
+                              <Collapse in={isOpen} unmountOnExit>
+                                <Box sx={{ p: 2, bgcolor: "background.default" }}>
+                                  {latestLoading && (
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 2 }}>
+                                      <CircularProgress size={18} />
+                                      <Typography variant="body2" sx={{ color: "text.secondary" }}>Loading failure details…</Typography>
+                                    </Box>
+                                  )}
+                                  {!latestLoading && failure && (
+                                    <FailureCard
+                                      item={latestFailedToGroupedItem(failure)}
+                                      index={0}
+                                      onImageClick={setImageSrc}
+                                      onExpandLog={(lines, testName, lbl) => setLogModal({ lines, testName, label: lbl })}
+                                      onOpenHistory={() => openTestHistory(t.testName)}
+                                      testRailUrl={testRailUrlFor(t.testName)}
+                                      areaName={areaName}
+                                    />
+                                  )}
+                                  {!latestLoading && !failure && (
+                                    <Alert severity="info" sx={{ m: 0 }}>
+                                      No current failure details available for this test.
+                                    </Alert>
+                                  )}
+                                </Box>
+                              </Collapse>
+                            </TableCell>
+                          </TableRow>
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

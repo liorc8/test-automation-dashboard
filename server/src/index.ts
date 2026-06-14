@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import testResultsRoutes from "./routes/testResultsRoutes";
 import areasRoutes from "./routes/areasRoutes";
 import envsRoutes from "./routes/envsRoutes";
@@ -22,6 +23,13 @@ app.use("/api/common-failures", commonRoutes);
 
 app.get("/health", (req: Request, res: Response) => {
   res.json({ status: "OK", system: "Automation Dashboard Backend" });
+});
+
+// Serve built client (client/dist) and SPA fallback for non-API routes.
+const clientDist = path.resolve(__dirname, "../../client/dist");
+app.use(express.static(clientDist));
+app.get(/^(?!\/api|\/health).*/, (_req: Request, res: Response) => {
+  res.sendFile(path.join(clientDist, "index.html"));
 });
 
 async function bootstrap() {

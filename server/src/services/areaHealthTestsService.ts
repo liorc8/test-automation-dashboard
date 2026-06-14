@@ -10,6 +10,8 @@ export type HealthTestItem = {
   fails: number;
   lastRunDate: string;
   lastPassed: boolean;
+  lastSuccess: string;
+  lastFailure: string;
 };
 
 function bucketWhereClause(bucket: HealthBucket): string {
@@ -25,8 +27,10 @@ function buildSQL(serverFilter: string, bucket: HealthBucket): string {
   return `
 WITH latest_per_test AS (
   SELECT
-    UPPER(AREA)               AS AREA,
-    UPPER(TESTNAME)           AS TESTNAME,
+    AREA,
+    TESTNAME,
+    UPPER(AREA)               AS AREA_KEY,
+    UPPER(TESTNAME)           AS TESTNAME_KEY,
     PASSED,
     TESTEDON,
     ROW_NUMBER() OVER (
@@ -38,16 +42,18 @@ WITH latest_per_test AS (
     ${serverFilter}
 ),
 latest AS (
-  SELECT AREA, TESTNAME, PASSED, TESTEDON
+  SELECT AREA, TESTNAME, AREA_KEY, TESTNAME_KEY, PASSED, TESTEDON
   FROM latest_per_test
   WHERE RN = 1
 ),
 pass_rate_per_test AS (
   SELECT
-    UPPER(AREA)     AS AREA,
-    UPPER(TESTNAME) AS TESTNAME,
+    UPPER(AREA)     AS AREA_KEY,
+    UPPER(TESTNAME) AS TESTNAME_KEY,
     SUM(CASE WHEN LOWER(PASSED)='true'  THEN 1 ELSE 0 END) AS SUCCESSES,
-    SUM(CASE WHEN LOWER(PASSED)='false' THEN 1 ELSE 0 END) AS FAILS
+    SUM(CASE WHEN LOWER(PASSED)='false' THEN 1 ELSE 0 END) AS FAILS,
+    MAX(CASE WHEN LOWER(PASSED)='true'  THEN TESTEDON END) AS LAST_SUCCESS,
+    MAX(CASE WHEN LOWER(PASSED)='false' THEN TESTEDON END) AS LAST_FAILURE
   FROM QA_AUTOMATION.TESTRESULTS
   WHERE UPPER(AREA) = UPPER(:area)
     ${serverFilter}
@@ -58,6 +64,8 @@ test_health AS (
     l.TESTNAME,
     l.PASSED,
     TO_CHAR(l.TESTEDON, 'DD/MM/YYYY') AS LAST_RUN_DATE,
+    TO_CHAR(p.LAST_SUCCESS, 'DD/MM/YYYY') AS LAST_SUCCESS,
+    TO_CHAR(p.LAST_FAILURE, 'DD/MM/YYYY') AS LAST_FAILURE,
     NVL(p.SUCCESSES, 0) AS SUCCESSES,
     NVL(p.FAILS, 0)     AS FAILS,
     CASE
@@ -65,9 +73,9 @@ test_health AS (
       ELSE ROUND(NVL(p.SUCCESSES, 0) * 100 / (NVL(p.SUCCESSES, 0) + NVL(p.FAILS, 0)))
     END AS PASS_RATE
   FROM latest l
-  LEFT JOIN pass_rate_per_test p ON p.AREA = l.AREA AND p.TESTNAME = l.TESTNAME
+  LEFT JOIN pass_rate_per_test p ON p.AREA_KEY = l.AREA_KEY AND p.TESTNAME_KEY = l.TESTNAME_KEY
 )
-SELECT TESTNAME, PASSED, LAST_RUN_DATE, SUCCESSES, FAILS, PASS_RATE
+SELECT TESTNAME, PASSED, LAST_RUN_DATE, LAST_SUCCESS, LAST_FAILURE, SUCCESSES, FAILS, PASS_RATE
 FROM test_health
 WHERE ${bucketWhereClause(bucket)}
 ORDER BY PASS_RATE ASC, TESTNAME ASC
@@ -92,5 +100,7 @@ export async function getAreaHealthTests(
     fails:       Number(r.FAILS ?? 0),
     lastRunDate: String(r.LAST_RUN_DATE ?? ""),
     lastPassed:  String(r.PASSED ?? "").toLowerCase() === "true",
+    lastSuccess: String(r.LAST_SUCCESS ?? ""),
+    lastFailure: String(r.LAST_FAILURE ?? ""),
   }));
 }

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AREAS } from "../config/areas";
+import { isKnownArea } from "../services/areasService";
 import { getTestHistory } from "../services/testHistoryService";
 import { EnvFilter } from "../services/envFilter";
 
@@ -8,8 +8,8 @@ export const getTestHistoryHandler = async (req: Request, res: Response) => {
         const areaName = req.params.areaName;
         const testName = req.params.testName;
 
-        const isKnownArea = AREAS.some((a) => a.id === areaName.toUpperCase());
-        if (!isKnownArea) return res.status(404).json({ error: `Unknown areaId: ${areaName}` });
+        const known = await isKnownArea(areaName);
+        if (!known) return res.status(404).json({ error: `Unknown areaId: ${areaName}` });
         if (!testName) return res.status(400).json({ error: "Missing testName" });
 
         const daysBackRaw = (req.query.daysBack ?? req.query.windowDays) as string | undefined;

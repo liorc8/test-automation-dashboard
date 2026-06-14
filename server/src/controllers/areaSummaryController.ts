@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import { getAreaSummary } from "../services/areaSummaryService";
-import { AREAS } from "../config/areas";
+import { isKnownArea } from "../services/areasService";
 
 export const getAreaSummaryHandler = async (req: Request, res: Response) => {
   try {
     const areaName = req.params.areaName;
 
-    const isKnownArea = AREAS.some((a) => a.id === areaName);
-    if (!isKnownArea) {
+    const known = await isKnownArea(areaName);
+    if (!known) {
       return res.status(404).json({ error: `Unknown areaId: ${areaName}` });
     }
 

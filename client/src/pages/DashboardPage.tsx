@@ -9,8 +9,6 @@ import {
   Divider,
   Button,
   Paper,
-  TextField,
-  InputAdornment,
   List,
   ListItemButton,
   ListItemText,
@@ -19,6 +17,8 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import SearchIcon from "@mui/icons-material/Search";
+import SearchInput from "../components/SearchInput";
+import ThemeToggle from "../components/ThemeToggle";
 
 import AreaCard from "../components/AreaCard";
 import EnvToggle from "../components/EnvToggle";
@@ -31,7 +31,6 @@ import {
   type EnvFilter,
   type DailyTrendPoint,
 } from "../services/apiService";
-import type { AreaItem } from "../types/Area";
 import type { AreasDashboardResponse, HealthBuckets } from "../types/Dashboard";
 import type { TestSearchResult } from "../types/TestSearch";
 
@@ -200,8 +199,10 @@ const DashboardPage: React.FC = () => {
           <EnvToggle value={env} onChange={handleEnvChange} />
         </Box>
 
-        {/* Right spacer — mirrors the left column width so center stays centered */}
-        <Box sx={{ flex: 1 }} />
+        {/* Right: theme toggle — mirrors the left column width so center stays centered */}
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end', pt: '68px' }}>
+          <ThemeToggle />
+        </Box>
 
       </Box>
 
@@ -211,7 +212,7 @@ const DashboardPage: React.FC = () => {
           mb: 4,
           borderRadius: 3,
           overflow: "hidden",
-          background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+          bgcolor: "background.paper",
         }}
       >
         <Box sx={{ p: 2.5, display: "flex", flexDirection: "column", gap: 1.75 }}>
@@ -220,28 +221,19 @@ const DashboardPage: React.FC = () => {
               <SearchIcon />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <TextField
-                size="small"
+              <SearchInput
                 fullWidth
                 value={testQuery}
-                onChange={(e) => setTestQuery(e.target.value)}
+                onChange={setTestQuery}
                 placeholder="Search tests across all areas…"
                 sx={{
                   maxWidth: 420,
                   "& .MuiOutlinedInput-root": {
-                    bgcolor: "#f8fafc",
                     borderRadius: 2,
                     "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#cbd5e1" },
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#3b82f6" },
                   },
                   "& .MuiOutlinedInput-input::placeholder": { opacity: 0.6 },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ fontSize: 18, color: "#94a3b8" }} />
-                    </InputAdornment>
-                  ),
                 }}
               />
             </Box>

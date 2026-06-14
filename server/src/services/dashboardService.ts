@@ -1,5 +1,6 @@
 import { execute } from "../db";
 import { AREAS } from "../config/areas";
+import { getAreas } from "./areasService";
 import { EnvFilter, buildServerFilter } from "./envFilter";
 
 function toNumber(x: unknown): number {
@@ -117,7 +118,14 @@ export async function getAreasDashboard(daysBack: number, env: EnvFilter = "qa")
     });
   }
 
-  const items = AREAS.map((a) => {
+  let areaList = AREAS;
+  try {
+    areaList = await getAreas();
+  } catch {
+    /* fall back to static config */
+  }
+
+  const items = areaList.map((a) => {
     const area = a.id.toUpperCase();
     return (
       byArea.get(area) ?? {

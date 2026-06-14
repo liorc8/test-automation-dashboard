@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AREAS } from "../config/areas";
+import { isKnownArea } from "../services/areasService";
 import { getAreaHealthTests, HealthBucket } from "../services/areaHealthTestsService";
 import { EnvFilter } from "../services/envFilter";
 
@@ -9,8 +9,8 @@ export const getAreaHealthTestsHandler = async (req: Request, res: Response) => 
   try {
     const { areaName } = req.params;
 
-    const isKnownArea = AREAS.some((a) => a.id === areaName);
-    if (!isKnownArea) return res.status(404).json({ error: `Unknown areaId: ${areaName}` });
+    const known = await isKnownArea(areaName);
+    if (!known) return res.status(404).json({ error: `Unknown areaId: ${areaName}` });
 
     const bucketRaw = (req.query.bucket as string | undefined)?.toLowerCase();
     if (!bucketRaw || !VALID_BUCKETS.includes(bucketRaw as HealthBucket)) {

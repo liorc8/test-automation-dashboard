@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Box, Typography, Button, Paper, Table, TableHead, TableBody, TableRow, TableCell, LinearProgress, CircularProgress, Alert } from "@mui/material";
+import { Box, Typography, Button, Paper, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress, Alert } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { getTestHistory } from "../services/apiService";
+import { useTestRailIds } from "../hooks/useTestRailIds";
+import ThemeToggle from "../components/ThemeToggle";
 import type { TestHistoryResponse, TestHistoryRow } from "../types/TestHistory";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -21,6 +24,9 @@ const TestHistoryPage: React.FC = () => {
     const [data, setData] = useState<TestHistoryResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    const { urlFor: testRailUrlFor } = useTestRailIds(areaName, env);
+    const testRailUrl = testName ? testRailUrlFor(testName) : null;
 
     useEffect(() => {
         if (!areaName || !testName) return;
@@ -50,8 +56,8 @@ const TestHistoryPage: React.FC = () => {
     }, [data]);
 
     return (
-        <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
-            <Box component="header" sx={{ bgcolor: "#fff", borderBottom: "1px solid #e5e7eb", px: 4, py: 1.5, display: "flex", alignItems: "center", gap: 2, position: "sticky", top: 0, zIndex: 100 }}>
+        <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+            <Box component="header" sx={{ bgcolor: "background.paper", borderBottom: 1, borderColor: "divider", px: 4, py: 1.5, display: "flex", alignItems: "center", gap: 2, position: "sticky", top: 0, zIndex: 100 }}>
                 <Button variant="outlined" size="small" startIcon={<ArrowBackIcon />} onClick={() => {
                     const referrer = sessionStorage.getItem('recentFailuresTab');
                     if (referrer === 'from-recent-failures') {
@@ -69,6 +75,20 @@ const TestHistoryPage: React.FC = () => {
                     <Typography sx={{ fontSize: 22, fontWeight: 800 }}>{testName}</Typography>
                     <Typography variant="caption" sx={{ color: "#94a3b8" }}>{areaName} · {env.toUpperCase()}</Typography>
                 </Box>
+                {testRailUrl && (
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<OpenInNewIcon />}
+                        href={testRailUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ borderColor: "#e2e8f0", color: "#64748b", textTransform: "none" }}
+                    >
+                        TestRail
+                    </Button>
+                )}
+                <ThemeToggle />
             </Box>
 
             <Box sx={{ p: "24px 40px" }}>
@@ -87,11 +107,20 @@ const TestHistoryPage: React.FC = () => {
                             <Typography sx={{ fontWeight: 700, mb: 1 }}>Pass Rate (by day)</Typography>
                             <Box sx={{ width: "100%", height: 160 }}>
                                 <ResponsiveContainer>
-                                    <AreaChart data={chartPoints} margin={{ top: 6, right: 12, left: 0, bottom: 6 }}>
-                                        <XAxis dataKey="date" hide />
+                                    <AreaChart data={chartPoints} margin={{ top: 6, right: 12, left: 0, bottom: 24 }}>
+                                        <XAxis
+                                            dataKey="date"
+                                            tickFormatter={(value: string) => {
+                                                const [, m, d] = value.split("-");
+                                                return d && m ? `${d}/${m}` : value;
+                                            }}
+                                            tick={{ fontSize: 11, fill: "#94a3b8" }}
+                                            tickMargin={8}
+                                            minTickGap={20}
+                                        />
                                         <YAxis domain={[0, 100]} hide />
                                         <Tooltip
-                                            contentStyle={{ bgcolor: "#0f172a", border: "1px solid #334155", borderRadius: 6 }}
+                                            contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 6 }}
                                             labelStyle={{ color: "#e2e8f0", fontSize: 12, fontWeight: 600 }}
                                             formatter={(value) => [`${value}%`, "Pass Rate"]}
                                         />
@@ -110,13 +139,13 @@ const TestHistoryPage: React.FC = () => {
                             }
                             return Array.from(grouped.entries()).map(([server, rows]) => (
                                 <Box key={server} sx={{ mb: 3 }}>
-                                    <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#0f172a", mb: 1.5, px: 1 }}>
+                                    <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary", mb: 1.5, px: 1 }}>
                                         🖥️ {server}
                                     </Typography>
                                     <Paper variant="outlined" sx={{ overflow: "hidden" }}>
                                         <Table size="small">
                                             <TableHead>
-                                                <TableRow sx={{ bgcolor: "#f8fafc" }}>
+                                                <TableRow sx={{ bgcolor: "background.default" }}>
                                                     <TableCell sx={{ fontWeight: 700, minWidth: 110 }}>Date</TableCell>
                                                     <TableCell align="center" sx={{ fontWeight: 700 }}>Result</TableCell>
                                                     <TableCell sx={{ fontWeight: 700 }}>Alma Version</TableCell>

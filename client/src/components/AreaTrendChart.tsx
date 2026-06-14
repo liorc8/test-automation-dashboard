@@ -80,11 +80,14 @@ const AreaTrendChart: React.FC<Props> = ({ data }) => {
   const hasData = data.some(d => d.total > 0);
   if (!hasData) return null;
 
-  const formatted: FormattedPoint[] = data.map(d => ({
-    ...d,
-    passRate: d.total > 0 ? Math.round((d.passed / d.total) * 100) : null,
-    label: d.date.slice(8) + '/' + d.date.slice(5, 7),
-  }));
+  const formatted: FormattedPoint[] = data
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(d => ({
+      ...d,
+      passRate: d.total > 0 ? Math.round((d.passed / d.total) * 100) : null,
+      label: d.date.slice(8) + '/' + d.date.slice(5, 7),
+    }));
 
   const thresholdTop = (1 - 0.80) * CAPSULE_H;
 
@@ -144,7 +147,7 @@ const AreaTrendChart: React.FC<Props> = ({ data }) => {
                   width: '100%',
                   maxWidth: 22,
                   height: CAPSULE_H,
-                  cursor: isNoData ? 'default' : 'pointer',
+                  cursor: 'default',
                   transition: 'transform 0.16s cubic-bezier(0.34,1.56,0.64,1)',
                   transform: isHovered ? 'scale(1.1)' : 'scale(1)',
                   zIndex: isHovered ? 10 : 'auto',

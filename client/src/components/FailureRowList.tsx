@@ -4,6 +4,8 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import FailureCard from "./FailureCard";
+import TestNoteButton from "./TestNoteButton";
+import TestNoteDisplay from "./TestNoteDisplay";
 import type { RecentFailureGroupedItem } from "../types/RecentFailuresGrouped";
 
 interface FailureRowListProps {
@@ -12,11 +14,12 @@ interface FailureRowListProps {
   onExpandLog: (lines: string[], testName: string, label: string) => void;
   onOpenHistory: (testName: string) => void;
   testRailUrlFor: (testName: string) => string | null;
+  areaName?: string;
 }
 
 /** Compact, expandable list of failures (same look as the List View tab). */
 const FailureRowList: React.FC<FailureRowListProps> = ({
-  items, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor,
+  items, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, areaName,
 }) => {
   const [openTestName, setOpenTestName] = useState<string | null>(null);
 
@@ -47,6 +50,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
               <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
                 {item.testName}
               </Typography>
+              <TestNoteButton areaName={areaName} testName={item.testName} stopPropagation />
               {trUrl && (
                 <Button
                   size="small"
@@ -85,6 +89,10 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
               }} />
             </Box>
 
+            <Box sx={{ px: 2, "&:not(:empty)": { pb: 1.25 } }}>
+              <TestNoteDisplay areaName={areaName} testName={item.testName} />
+            </Box>
+
             <Collapse in={isOpen} unmountOnExit>
               <Box sx={{
                 p: "16px 16px 20px",
@@ -99,6 +107,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
                   onExpandLog={onExpandLog}
                   onOpenHistory={() => onOpenHistory(item.testName)}
                   testRailUrl={trUrl}
+                  areaName={areaName}
                 />
               </Box>
             </Collapse>

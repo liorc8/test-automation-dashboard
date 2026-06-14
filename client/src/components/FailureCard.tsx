@@ -5,6 +5,8 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import ScreenshotPanel from "./ScreenshotPanel";
+import TestNoteButton from "./TestNoteButton";
+import TestNoteDisplay from "./TestNoteDisplay";
 import {
   WINDOW_DAYS,
   renderLogLines,
@@ -95,9 +97,10 @@ interface FailureCardProps {
   onExpandLog: (lines: string[], testName: string, label: string) => void;
   onOpenHistory: () => void;
   testRailUrl?: string | null;
+  areaName?: string;
 }
 
-const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl }) => {
+const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, areaName }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = item.reasons[0] ?? null;
   const extra = item.reasons.slice(1, 3);
@@ -154,6 +157,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
               TR
             </Button>
           )}
+          <TestNoteButton areaName={areaName} testName={item.testName} />
           {item.lastFailure.server && (
             <Chip label={`🖥️ ${item.lastFailure.server}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "text.secondary", borderColor: "divider", flexShrink: 0 }} />
           )}
@@ -164,6 +168,9 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
             Failed {item.failCount} {item.failCount === 1 ? "time" : "times"} in {WINDOW_DAYS} days
           </Box>
         </Box>
+
+        {/* Local note */}
+        <TestNoteDisplay areaName={areaName} testName={item.testName} />
 
         {/* Primary reason */}
         {primary && (

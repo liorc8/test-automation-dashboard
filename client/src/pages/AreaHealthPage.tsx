@@ -336,6 +336,7 @@ const AreaHealthPage: React.FC = () => {
                                       onExpandLog={(lines, testName, lbl) => setLogModal({ lines, testName, label: lbl })}
                                       onOpenHistory={() => openTestHistory(t.testName)}
                                       testRailUrl={testRailUrlFor(t.testName)}
+                                      areaName={areaName}
                                     />
                                   )}
                                   {!latestLoading && !failure && (

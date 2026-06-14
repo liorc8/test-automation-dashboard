@@ -13,6 +13,8 @@ import ThemeToggle from "../components/ThemeToggle";
 import { useTestRailIds } from "../hooks/useTestRailIds";
 import FailureCard, { latestFailedToGroupedItem } from "../components/FailureCard";
 import FailureRowList from "../components/FailureRowList";
+import TestNoteButton from "../components/TestNoteButton";
+import TestNoteDisplay from "../components/TestNoteDisplay";
 import ImageModal from "../components/ImageModal";
 import LogModal from "../components/LogModal";
 import { WINDOW_DAYS } from "../components/failureHelpers";
@@ -36,9 +38,10 @@ interface LatestFailedViewProps {
   onExpandLog: (lines: string[], testName: string, label: string) => void;
   onOpenHistory: (testName: string) => void;
   testRailUrlFor: (testName: string) => string | null;
+  areaName?: string;
 }
 
-const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor }) => {
+const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, areaName }) => {
   const [openTestName, setOpenTestName] = useState<string | null>(null);
 
   const handleRowClick = (testName: string) => {
@@ -116,6 +119,7 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                     <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
                       {test.testName}
                     </Typography>
+                    <TestNoteButton areaName={areaName} testName={test.testName} stopPropagation />
                     {trUrl && (
                       <Button
                         size="small"
@@ -169,6 +173,10 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                     }} />
                   </Box>
 
+                  <Box sx={{ px: 2, "&:not(:empty)": { pb: 1.25 } }}>
+                    <TestNoteDisplay areaName={areaName} testName={test.testName} />
+                  </Box>
+
                   <Collapse in={isOpen} unmountOnExit>
                     <Box sx={{
                       p: "16px 16px 20px",
@@ -183,6 +191,7 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                         onExpandLog={onExpandLog}
                         onOpenHistory={() => onOpenHistory(test.testName)}
                         testRailUrl={testRailUrlFor(test.testName)}
+                        areaName={areaName}
                       />
                     </Box>
                   </Collapse>
@@ -433,6 +442,7 @@ const RecentFailuresPage: React.FC = () => {
                       onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
                       onOpenHistory={() => openTestHistory(item.testName)}
                       testRailUrl={testRailUrlFor(item.testName)}
+                      areaName={areaName}
                     />
                   ))}
                 </Box>
@@ -458,6 +468,7 @@ const RecentFailuresPage: React.FC = () => {
                 onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
                 onOpenHistory={openTestHistory}
                 testRailUrlFor={testRailUrlFor}
+                areaName={areaName}
               />
             )}
           </>
@@ -502,6 +513,7 @@ const RecentFailuresPage: React.FC = () => {
                       onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
                       onOpenHistory={openTestHistory}
                       testRailUrlFor={testRailUrlFor}
+                      areaName={areaName}
                     />
                   </Box>
                 ))}

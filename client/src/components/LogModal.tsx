@@ -26,7 +26,11 @@ const LogModal: React.FC<LogModalProps> = ({ lines, testName, reasonLabel, onClo
       </Typography>
     </DialogTitle>
     <DialogContent sx={{ p: 0, overflowY: "auto" }}>
-      <Box sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace", fontSize: 11, py: 1.25 }}>
+      <Box
+        component="pre"
+        data-testid="expanded-log"
+        sx={{ m: 0, fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace", fontSize: 11, py: 1.25, whiteSpace: "pre-wrap" }}
+      >
         {renderLogLines(lines)}
       </Box>
     </DialogContent>

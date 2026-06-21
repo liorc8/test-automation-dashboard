@@ -5,8 +5,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import ScreenshotPanel from "./ScreenshotPanel";
-import TestNoteButton from "./TestNoteButton";
-import TestNoteDisplay from "./TestNoteDisplay";
+import InlineNotes from "./InlineNotes";
 import {
   WINDOW_DAYS,
   renderLogLines,
@@ -202,7 +201,6 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
           <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, fontWeight: 600, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all", lineHeight: 1.5 }}>
             {item.testName}
           </Typography>
-          <TestNoteButton areaName={areaName} testName={item.testName} />
           {item.lastFailure.server && (
             <Chip label={`🖥️ ${item.lastFailure.server}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "text.secondary", borderColor: "divider", flexShrink: 0 }} />
           )}
@@ -214,8 +212,8 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
           </Box>
         </Box>
 
-        {/* Local note */}
-        <TestNoteDisplay areaName={areaName} testName={item.testName} />
+        {/* Test-level notes */}
+        <InlineNotes scope="test" entityId={`test:${areaName ?? ""}:${item.testName}`} />
 
         {/* Primary reason — its action row also hosts History + TestRail so all
             buttons (Expand Log, Full Log, History, TR) sit side by side. */}

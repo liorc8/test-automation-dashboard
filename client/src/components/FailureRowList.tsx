@@ -4,8 +4,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import FailureCard from "./FailureCard";
-import TestNoteButton from "./TestNoteButton";
-import TestNoteDisplay from "./TestNoteDisplay";
+import InlineNotes from "./InlineNotes";
 import type { RecentFailureGroupedItem } from "../types/RecentFailuresGrouped";
 
 interface FailureRowListProps {
@@ -50,7 +49,16 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
               <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
                 {item.testName}
               </Typography>
-              <TestNoteButton areaName={areaName} testName={item.testName} stopPropagation />
+              {/* Collapsed list view: read-only note chips, flush right next to the actions. */}
+              {!isOpen && (
+                <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "45%", flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                  <InlineNotes
+                    scope="test"
+                    entityId={`test:${areaName ?? ""}:${item.testName}`}
+                    readOnly
+                  />
+                </Box>
+              )}
               {trUrl && (
                 <Button
                   size="small"
@@ -87,10 +95,6 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
                 transition: "transform 0.22s ease",
                 transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
               }} />
-            </Box>
-
-            <Box sx={{ px: 2, "&:not(:empty)": { pb: 1.25 } }}>
-              <TestNoteDisplay areaName={areaName} testName={item.testName} />
             </Box>
 
             <Collapse in={isOpen} unmountOnExit>

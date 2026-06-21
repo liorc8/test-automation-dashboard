@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import FailureRowList from "./FailureRowList";
+import InlineNotes from "./InlineNotes";
 import type { ReasonGroup } from "../types/FailuresByReason";
 
 interface ByReasonViewProps {
@@ -18,15 +19,22 @@ function previewReason(text: string): string {
   return line.length > 160 ? `${line.slice(0, 160)}…` : line;
 }
 
+
 const ByReasonView: React.FC<ByReasonViewProps> = ({
   reasons, areaName, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor,
 }) => {
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      {reasons.map((group, idx) => (
+      {reasons.map((group, idx) => {
+        const isExpanded = expandedIdx === idx;
+        return (
         <Accordion
           key={idx}
           disableGutters
+          expanded={isExpanded}
+          onChange={(_, exp) => setExpandedIdx(exp ? idx : null)}
           sx={{
             bgcolor: "background.paper",
             border: 1, borderColor: "divider", borderRadius: 2,
@@ -49,8 +57,14 @@ const ByReasonView: React.FC<ByReasonViewProps> = ({
             }}>
               {previewReason(group.reasonText)}
             </Typography>
+            {/* Collapsed: read-only reason note chips, flush right before the count + arrow. */}
+            {!isExpanded && (
+              <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "40%", flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                <InlineNotes scope="reason" entityId={`reason:${areaName ?? ""}:${idx}`} readOnly />
+              </Box>
+            )}
             <Box component="span" sx={{
-              ml: "auto", flexShrink: 0,
+              ml: isExpanded ? "auto" : 0, flexShrink: 0,
               bgcolor: "#475569", color: "#f1f5f9", borderRadius: 20,
               px: 1.5, py: "3px", fontSize: 12, fontWeight: 700,
             }}>
@@ -58,6 +72,17 @@ const ByReasonView: React.FC<ByReasonViewProps> = ({
             </Box>
           </AccordionSummary>
           <AccordionDetails sx={{ p: 0 }}>
+            {/* Expanded only: the single editable reason-level Add Note action.
+                Adding/editing/deleting cascades to every child test of this reason. */}
+            {isExpanded && (
+              <Box sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
+                <InlineNotes
+                  scope="reason"
+                  entityId={`reason:${areaName ?? ""}:${idx}`}
+                  cascadeTo={group.tests.map((t) => `test:${areaName ?? ""}:${t.testName}`)}
+                />
+              </Box>
+            )}
             {/* Compact rows — same layout as the By Server / By Job tabs. */}
             <FailureRowList
               items={group.tests}
@@ -69,7 +94,8 @@ const ByReasonView: React.FC<ByReasonViewProps> = ({
             />
           </AccordionDetails>
         </Accordion>
-      ))}
+        );
+      })}
     </Box>
   );
 };

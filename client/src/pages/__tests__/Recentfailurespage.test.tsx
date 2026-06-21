@@ -36,7 +36,10 @@ describe("RecentFailuresPage", () => {
     vi.clearAllMocks();
     vi.mocked(api.getAreaTestRailIds).mockResolvedValue({ areaName: "LOD", env: "qa", baseUrl: "", ids: {} } as any);
     vi.mocked(api.getAreaRecentFailuresGrouped).mockResolvedValue({ area: "LOD", windowDays: 10, reasonsMax: 4, items: [groupedItem] } as any);
-    vi.mocked(api.getAreaLatestFailedTests).mockResolvedValue({ area: "LOD", env: "qa", totalCount: 0, servers: [] } as any);
+    vi.mocked(api.getAreaLatestFailedTests).mockResolvedValue({
+      area: "LOD", env: "qa", totalCount: 1,
+      servers: [{ server: "QAC01", tests: [{ testName: "Srv_Test", server: "QAC01", testedOn: null, failureText: "FATAL x", logLink: null, screenshotLink: null, almaVersion: null, buildNumber: null }] }],
+    } as any);
     vi.mocked(api.getAreaFailuresByReason).mockResolvedValue({
       area: "LOD", windowDays: 10, env: "qa",
       reasons: [{ reasonText: "FATAL shared reason", failCount: 2, tests: [groupedItem, { ...groupedItem, testName: "Other" }] }],
@@ -55,6 +58,13 @@ describe("RecentFailuresPage", () => {
   it("renders failure cards from mocked data on the All tab", async () => {
     renderPage();
     expect(await screen.findByText("MyFailingTest")).toBeInTheDocument();
+  });
+
+  it("loads the By Server tab with collapsed accordions by default", async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "By Server" }));
+    const summary = await screen.findByRole("button", { name: /QAC01/i });
+    expect(summary).toHaveAttribute("aria-expanded", "false");
   });
 
   it("loads the By Reason tab with collapsed accordions by default", async () => {

@@ -17,12 +17,13 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import SearchIcon from "@mui/icons-material/Search";
-import SearchInput from "../components/SearchInput";
+import SearchWithHistory from "../components/SearchWithHistory";
 import ThemeToggle from "../components/ThemeToggle";
 
 import AreaCard from "../components/AreaCard";
 import EnvToggle from "../components/EnvToggle";
 import { useFavorites } from "../hooks/useFavorites";
+import { useSearchHistory } from "../hooks/useSearchHistory";
 import {
   getAreas,
   getAreasDashboard,
@@ -51,6 +52,7 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { toggleFavorite, isFavorite } = useFavorites();
+  const { push: pushSearchHistory } = useSearchHistory("dashboard-search-history");
   const [env, setEnv] = useState<EnvFilter>(
     () => (localStorage.getItem("selectedEnv") as EnvFilter) ?? "qa"
   );
@@ -150,8 +152,29 @@ const DashboardPage: React.FC = () => {
       {/* Header row: 3-column layout keeps the center content truly centered */}
       <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 4 }}>
 
-        {/* Left: nav button, vertically aligned with the env toggle */}
-        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start', pt: '68px' }}>
+        {/* Left: nav buttons, vertically aligned with the env toggle */}
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start', gap: 1.25, pt: '68px' }}>
+          <Button
+            variant="contained"
+            onClick={() => navigate("/alma-oops")}
+            sx={{
+              textTransform: "none",
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: 2,
+              px: 2.5,
+              py: 0.9,
+              backgroundColor: "#1e293b",
+              color: "#f1f5f9",
+              boxShadow: "none",
+              "&:hover": {
+                backgroundColor: "#334155",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+              },
+            }}
+          >
+            Alma oops
+          </Button>
           <Button
             variant="contained"
             onClick={() => navigate("/common-failures")}
@@ -213,7 +236,7 @@ const DashboardPage: React.FC = () => {
         sx={{
           mb: 4,
           borderRadius: 3,
-          overflow: "hidden",
+          overflow: "visible",
           bgcolor: "background.paper",
         }}
       >
@@ -222,21 +245,13 @@ const DashboardPage: React.FC = () => {
             <Box sx={{ width: 42, height: 42, borderRadius: 2, display: "grid", placeItems: "center", bgcolor: "#eff6ff", color: "#1d4ed8" }}>
               <SearchIcon />
             </Box>
-            <Box sx={{ flex: 1 }}>
-              <SearchInput
+            <Box sx={{ flex: 1, maxWidth: 420 }}>
+              <SearchWithHistory
                 fullWidth
                 value={testQuery}
-                onChange={setTestQuery}
+                onSearch={setTestQuery}
+                storageKey="dashboard-search-history"
                 placeholder="Search tests across all areas…"
-                sx={{
-                  maxWidth: 420,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#cbd5e1" },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#3b82f6" },
-                  },
-                  "& .MuiOutlinedInput-input::placeholder": { opacity: 0.6 },
-                }}
               />
             </Box>
           </Box>
@@ -262,7 +277,7 @@ const DashboardPage: React.FC = () => {
                   {testResults.map((result) => (
                     <ListItemButton
                       key={`${result.area}-${result.testName}`}
-                      onClick={() => openTestHistory(result.area, result.testName)}
+                      onClick={() => { pushSearchHistory(result.testName); openTestHistory(result.area, result.testName); }}
                       sx={{ py: 1.35, px: 2, borderBottom: "1px solid #f1f5f9", "&:last-child": { borderBottom: 0 } }}
                     >
                       <ListItemText

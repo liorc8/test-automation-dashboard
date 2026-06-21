@@ -3,8 +3,10 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box, Typography, Button,
   Collapse, ToggleButtonGroup, ToggleButton, Paper, Skeleton, Alert,
+  Accordion, AccordionSummary, AccordionDetails,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -26,6 +28,22 @@ import type { LatestFailedTestsResponse } from "../types/LatestFailed";
 import type { AreaFailuresByReasonResponse } from "../types/FailuresByReason";
 
 const LIMIT = 200;
+
+// Shared styling for the collapsible group accordions (By Server / By Job).
+const accordionSx = {
+  bgcolor: "background.paper",
+  border: 1,
+  borderColor: "divider",
+  borderRadius: 2,
+  overflow: "hidden",
+  "&:before": { display: "none" },
+  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+} as const;
+
+const accordionSummarySx = {
+  bgcolor: "#1e293b",
+  "& .MuiAccordionSummary-content": { alignItems: "center", gap: 1.5, my: 1.25, minWidth: 0 },
+} as const;
 
 function buildTestHistoryPath(areaName: string, testName: string, env: EnvFilter): string {
   return `/area/${encodeURIComponent(areaName)}/test/${encodeURIComponent(testName)}/history?env=${env}`;
@@ -77,24 +95,17 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3.5 }}>
       {filteredServers.map((serverGroup) => (
-        <Box key={serverGroup.server}>
-          {/* Server header */}
-          <Box sx={{
-            display: "flex", alignItems: "center", gap: 1.5,
-            px: 2.25, py: 1.5,
-            bgcolor: "#1e293b",
-            borderRadius: "8px 8px 0 0",
-            borderBottom: "3px solid #ef4444",
-          }}>
+        <Accordion key={serverGroup.server} disableGutters sx={accordionSx}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#94a3b8" }} />} sx={accordionSummarySx}>
             <Typography sx={{ fontSize: 18, lineHeight: 1 }}>🖥️</Typography>
-            <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 15, fontWeight: 800, color: "#f1f5f9", letterSpacing: "0.05em" }}>
+            <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 15, fontWeight: 800, color: "#f1f5f9", letterSpacing: "0.05em", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
               {serverGroup.server}
             </Typography>
-            <Box component="span" sx={{ ml: "auto", bgcolor: "#ef4444", color: "#fff", borderRadius: 20, px: 1.5, py: "3px", fontSize: 12, fontWeight: 700 }}>
+            <Box component="span" sx={{ ml: "auto", flexShrink: 0, bgcolor: "#475569", color: "#f1f5f9", borderRadius: 20, px: 1.5, py: "3px", fontSize: 12, fontWeight: 700 }}>
               {serverGroup.tests.length} {serverGroup.tests.length === 1 ? "test" : "tests"}
             </Box>
-          </Box>
-
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 0 }}>
           {/* Test list */}
           <Paper variant="outlined" sx={{ borderTop: "none", borderRadius: "0 0 8px 8px", overflow: "hidden" }}>
             {serverGroup.tests.map((test, idx) => {
@@ -201,7 +212,8 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
               );
             })}
           </Paper>
-        </Box>
+          </AccordionDetails>
+        </Accordion>
       ))}
     </Box>
   );
@@ -371,7 +383,7 @@ const RecentFailuresPage: React.FC = () => {
         {activeTab === 1 && latestData && (
           <Box sx={{ bgcolor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 2.5, px: 2.25, py: 0.75, textAlign: "center" }}>
             <Typography sx={{ fontSize: 20, fontWeight: 800, color: "#dc2626" }}>{latestData.totalCount}</Typography>
-            <Typography sx={{ fontSize: 11, color: "#ef4444" }}>broken now</Typography>
+            <Typography sx={{ fontSize: 11, color: "#ef4444" }}>failed tests</Typography>
           </Box>
         )}
         {activeTab === 2 && data && (
@@ -504,33 +516,27 @@ const RecentFailuresPage: React.FC = () => {
             {!loading && !error && jobGroups.length > 0 && (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 3.5 }}>
                 {jobGroups.map(group => (
-                  <Box key={group.job}>
-                    {/* Job header */}
-                    <Box sx={{
-                      display: "flex", alignItems: "center", gap: 1.5,
-                      px: 2.25, py: 1.5,
-                      bgcolor: "#1e293b",
-                      borderRadius: "8px 8px 0 0",
-                      borderBottom: "3px solid #475569",
-                    }}>
+                  <Accordion key={group.job} disableGutters sx={accordionSx}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#94a3b8" }} />} sx={accordionSummarySx}>
                       <Typography sx={{ fontSize: 18, lineHeight: 1 }}>🛠️</Typography>
-                      <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 15, fontWeight: 800, color: "#f1f5f9", letterSpacing: "0.03em", wordBreak: "break-all" }}>
+                      <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 15, fontWeight: 800, color: "#f1f5f9", letterSpacing: "0.03em", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
                         {group.job}
                       </Typography>
-                      <Box component="span" sx={{ ml: "auto", bgcolor: "#475569", color: "#f1f5f9", borderRadius: 20, px: 1.5, py: "3px", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                      <Box component="span" sx={{ ml: "auto", flexShrink: 0, bgcolor: "#475569", color: "#f1f5f9", borderRadius: 20, px: 1.5, py: "3px", fontSize: 12, fontWeight: 700 }}>
                         {group.items.length} {group.items.length === 1 ? "test" : "tests"}
                       </Box>
-                    </Box>
-                    {/* Compact rows (same look as List View) */}
-                    <FailureRowList
-                      items={group.items}
-                      onImageClick={setImageSrc}
-                      onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
-                      onOpenHistory={openTestHistory}
-                      testRailUrlFor={testRailUrlFor}
-                      areaName={areaName}
-                    />
-                  </Box>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ p: 0 }}>
+                      <FailureRowList
+                        items={group.items}
+                        onImageClick={setImageSrc}
+                        onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
+                        onOpenHistory={openTestHistory}
+                        testRailUrlFor={testRailUrlFor}
+                        areaName={areaName}
+                      />
+                    </AccordionDetails>
+                  </Accordion>
                 ))}
               </Box>
             )}

@@ -4,6 +4,7 @@ import type { AreaHealthResponse, EnvHealthResponse } from "../types/Health";
 import type { AreasDashboardResponse } from "../types/Dashboard";
 import type { AreaRecentFailuresGroupedResponse } from "../types/RecentFailuresGrouped";
 import type { AreaFailuresByReasonResponse } from "../types/FailuresByReason";
+import type { AlmaOopsResponse } from "../types/AlmaOops";
 import type { LatestFailedTestsResponse } from "../types/LatestFailed";
 import type { CommonFailuresResponse } from "../types/CommonFailures";
 import type { TestSearchResult } from "../types/TestSearch";
@@ -187,6 +188,14 @@ export const getAreaLatestFailedTests = async (
   const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/latest-failed-tests?env=${env}`;
   const response = await fetch(url);
   return handleResponse<LatestFailedTestsResponse>(response);
+};
+
+export const getAlmaOops = async (
+  env: EnvFilter = "qa"
+): Promise<AlmaOopsResponse> => {
+  const url = `${API_BASE_URL}/alma-oops?env=${env}`;
+  const response = await fetch(url);
+  return handleResponse<AlmaOopsResponse>(response);
 };
 
 export const getCommonFailures = async (

@@ -150,8 +150,29 @@ const DashboardPage: React.FC = () => {
       {/* Header row: 3-column layout keeps the center content truly centered */}
       <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 4 }}>
 
-        {/* Left: nav button, vertically aligned with the env toggle */}
-        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start', pt: '68px' }}>
+        {/* Left: nav buttons, vertically aligned with the env toggle */}
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start', gap: 1.25, pt: '68px' }}>
+          <Button
+            variant="contained"
+            onClick={() => navigate("/alma-oops")}
+            sx={{
+              textTransform: "none",
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: 2,
+              px: 2.5,
+              py: 0.9,
+              backgroundColor: "#1e293b",
+              color: "#f1f5f9",
+              boxShadow: "none",
+              "&:hover": {
+                backgroundColor: "#334155",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+              },
+            }}
+          >
+            Alma oops
+          </Button>
           <Button
             variant="contained"
             onClick={() => navigate("/common-failures")}

@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import FailureCard from "./FailureCard";
+import FailureRowList from "./FailureRowList";
 import type { ReasonGroup } from "../types/FailuresByReason";
 
 interface ByReasonViewProps {
@@ -57,21 +57,16 @@ const ByReasonView: React.FC<ByReasonViewProps> = ({
               {group.failCount} {group.failCount === 1 ? "test" : "tests"}
             </Box>
           </AccordionSummary>
-          <AccordionDetails sx={{ p: 2, bgcolor: "background.default" }}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}>
-              {group.tests.map((item, i) => (
-                <FailureCard
-                  key={item.testName}
-                  item={item}
-                  index={i}
-                  onImageClick={onImageClick}
-                  onExpandLog={onExpandLog}
-                  onOpenHistory={() => onOpenHistory(item.testName)}
-                  testRailUrl={testRailUrlFor(item.testName)}
-                  areaName={areaName}
-                />
-              ))}
-            </Box>
+          <AccordionDetails sx={{ p: 0 }}>
+            {/* Compact rows — same layout as the By Server / By Job tabs. */}
+            <FailureRowList
+              items={group.tests}
+              onImageClick={onImageClick}
+              onExpandLog={onExpandLog}
+              onOpenHistory={onOpenHistory}
+              testRailUrlFor={testRailUrlFor}
+              areaName={areaName}
+            />
           </AccordionDetails>
         </Accordion>
       ))}

@@ -383,7 +383,7 @@ const RecentFailuresPage: React.FC = () => {
         {activeTab === 1 && latestData && (
           <Box sx={{ bgcolor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 2.5, px: 2.25, py: 0.75, textAlign: "center" }}>
             <Typography sx={{ fontSize: 20, fontWeight: 800, color: "#dc2626" }}>{latestData.totalCount}</Typography>
-            <Typography sx={{ fontSize: 11, color: "#ef4444" }}>broken now</Typography>
+            <Typography sx={{ fontSize: 11, color: "#ef4444" }}>failed tests</Typography>
           </Box>
         )}
         {activeTab === 2 && data && (

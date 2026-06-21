@@ -17,12 +17,13 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import SearchIcon from "@mui/icons-material/Search";
-import SearchInput from "../components/SearchInput";
+import SearchWithHistory from "../components/SearchWithHistory";
 import ThemeToggle from "../components/ThemeToggle";
 
 import AreaCard from "../components/AreaCard";
 import EnvToggle from "../components/EnvToggle";
 import { useFavorites } from "../hooks/useFavorites";
+import { useSearchHistory } from "../hooks/useSearchHistory";
 import {
   getAreas,
   getAreasDashboard,
@@ -51,6 +52,7 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { toggleFavorite, isFavorite } = useFavorites();
+  const { push: pushSearchHistory } = useSearchHistory("dashboard-search-history");
   const [env, setEnv] = useState<EnvFilter>(
     () => (localStorage.getItem("selectedEnv") as EnvFilter) ?? "qa"
   );
@@ -234,7 +236,7 @@ const DashboardPage: React.FC = () => {
         sx={{
           mb: 4,
           borderRadius: 3,
-          overflow: "hidden",
+          overflow: "visible",
           bgcolor: "background.paper",
         }}
       >
@@ -243,21 +245,13 @@ const DashboardPage: React.FC = () => {
             <Box sx={{ width: 42, height: 42, borderRadius: 2, display: "grid", placeItems: "center", bgcolor: "#eff6ff", color: "#1d4ed8" }}>
               <SearchIcon />
             </Box>
-            <Box sx={{ flex: 1 }}>
-              <SearchInput
+            <Box sx={{ flex: 1, maxWidth: 420 }}>
+              <SearchWithHistory
                 fullWidth
                 value={testQuery}
-                onChange={setTestQuery}
+                onSearch={setTestQuery}
+                storageKey="dashboard-search-history"
                 placeholder="Search tests across all areas…"
-                sx={{
-                  maxWidth: 420,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#cbd5e1" },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#3b82f6" },
-                  },
-                  "& .MuiOutlinedInput-input::placeholder": { opacity: 0.6 },
-                }}
               />
             </Box>
           </Box>
@@ -283,7 +277,7 @@ const DashboardPage: React.FC = () => {
                   {testResults.map((result) => (
                     <ListItemButton
                       key={`${result.area}-${result.testName}`}
-                      onClick={() => openTestHistory(result.area, result.testName)}
+                      onClick={() => { pushSearchHistory(result.testName); openTestHistory(result.area, result.testName); }}
                       sx={{ py: 1.35, px: 2, borderBottom: "1px solid #f1f5f9", "&:last-child": { borderBottom: 0 } }}
                     >
                       <ListItemText

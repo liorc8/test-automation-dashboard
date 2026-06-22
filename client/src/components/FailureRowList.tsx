@@ -51,7 +51,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
               </Typography>
               {/* Collapsed list view: read-only note chips, flush right next to the actions. */}
               {!isOpen && (
-                <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "45%", flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "45%", flexShrink: 1, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
                   <InlineNotes
                     scope="test"
                     entityId={`test:${areaName ?? ""}:${item.testName}`}
@@ -70,7 +70,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
                   onClick={(e) => e.stopPropagation()}
                   sx={{
                     borderColor: "#cbd5e1", color: "#475569", textTransform: "none",
-                    fontSize: 11, py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
+                    fontSize: 11, py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4, flexShrink: 0,
                     "&:hover": { borderColor: "#94a3b8", bgcolor: "background.paper", color: "text.primary" },
                   }}
                 >
@@ -84,7 +84,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
                 onClick={(e) => { e.stopPropagation(); onOpenHistory(item.testName); }}
                 sx={{
                   borderColor: "#cbd5e1", color: "#475569", textTransform: "none",
-                  fontSize: 11, py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
+                  fontSize: 11, py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4, flexShrink: 0,
                   "&:hover": { borderColor: "#94a3b8", bgcolor: "background.paper", color: "text.primary" },
                 }}
               >

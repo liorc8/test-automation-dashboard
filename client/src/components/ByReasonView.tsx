@@ -59,7 +59,7 @@ const ByReasonView: React.FC<ByReasonViewProps> = ({
             </Typography>
             {/* Collapsed: read-only reason note chips, flush right before the count + arrow. */}
             {!isExpanded && (
-              <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "40%", flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+              <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "40%", flexShrink: 1, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
                 <InlineNotes scope="reason" entityId={`reason:${areaName ?? ""}:${idx}`} readOnly />
               </Box>
             )}

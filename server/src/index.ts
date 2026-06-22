@@ -8,6 +8,7 @@ import envsRoutes from "./routes/envsRoutes";
 import commonRoutes from "./routes/commonRoutes";
 import logsRoutes from "./routes/logsRoutes";
 import almaOopsRoutes from "./routes/almaOopsRoutes";
+import notesRoutes from "./routes/notesRoutes";
 import { checkConnection, closePool } from "./db";
 
 dotenv.config();
@@ -24,6 +25,7 @@ app.use("/api/envs", envsRoutes);
 app.use("/api/common-failures", commonRoutes);
 app.use("/api/logs", logsRoutes);
 app.use("/api/alma-oops", almaOopsRoutes);
+app.use("/api/notes", notesRoutes);
 
 app.get("/health", (req: Request, res: Response) => {
   res.json({ status: "OK", system: "Automation Dashboard Backend" });

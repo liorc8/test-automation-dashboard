@@ -53,8 +53,8 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
               {!isOpen && (
                 <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "45%", flexShrink: 1, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
                   <InlineNotes
-                    scope="test"
-                    entityId={`test:${areaName ?? ""}:${item.testName}`}
+                    testName={item.testName}
+                    failureReason={item.reasons[0]?.text ?? "General"}
                     readOnly
                   />
                 </Box>

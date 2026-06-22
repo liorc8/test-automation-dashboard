@@ -125,7 +125,7 @@ interface FailureCardProps {
   areaName?: string;
 }
 
-const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, areaName }) => {
+const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = item.reasons[0] ?? null;
   const extra = item.reasons.slice(1, 3);
@@ -213,7 +213,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
         </Box>
 
         {/* Test-level notes */}
-        <InlineNotes scope="test" entityId={`test:${areaName ?? ""}:${item.testName}`} />
+        <InlineNotes testName={item.testName} failureReason={item.reasons[0]?.text ?? "General"} />
 
         {/* Primary reason — its action row also hosts History + TestRail so all
             buttons (Expand Log, Full Log, History, TR) sit side by side. */}

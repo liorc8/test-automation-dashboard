@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useSyncExternalStore } from "react";
+import React, { useState } from "react";
 import { Box, Typography, TextField, IconButton, Tooltip, Link } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import StickyNote2OutlinedIcon from "@mui/icons-material/StickyNote2Outlined";
@@ -7,12 +7,14 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import { useNotes, selectNotes } from "../hooks/useNotes";
+import type { FailureNote } from "../services/apiService";
 
+// FAILURE_REASON column is VARCHAR2(1000); cap the key so it always fits the DB.
+const MAX_REASON_LEN = 1000;
 
-type NoteItem = { id: string; text: string };
-type NoteScope = "test" | "reason";
-
-const JIRA_BASE_URL = import.meta.env.VITE_JIRA_BASE_URL;
+// JIRA base comes from the Vite env (VITE_JIRA_BASE_URL); fallback keeps links working.
+const JIRA_BASE_URL = import.meta.env.VITE_JIRA_BASE_URL || "https://default.atlassian.net/browse/";
 const JIRA_TICKET_RE = /\b[A-Z]+-\d+\b/g;
 
 /**
@@ -45,50 +47,6 @@ function renderNoteText(text: string): React.ReactNode {
   }
   if (lastIndex < text.length) parts.push(text.slice(lastIndex));
   return parts;
-}
-
-const store = new Map<string, NoteItem[]>();
-const EMPTY: NoteItem[] = [];
-const listeners = new Set<() => void>();
-
-const emit = () => listeners.forEach((l) => l());
-const subscribe = (cb: () => void) => { listeners.add(cb); return () => { listeners.delete(cb); }; };
-
-let seq = 0;
-const newId = () => `note-${Date.now()}-${seq++}`;
-
-const pushNote = (id: string, text: string) =>
-  store.set(id, [...(store.get(id) ?? []), { id: newId(), text }]);
-const updateNote = (id: string, noteId: string, text: string) =>
-  store.set(id, (store.get(id) ?? []).map((n) => (n.id === noteId ? { ...n, text } : n)));
-const updateNoteByText = (id: string, oldText: string, text: string) =>
-  store.set(id, (store.get(id) ?? []).map((n) => (n.text === oldText ? { ...n, text } : n)));
-const deleteNote = (id: string, noteId: string) =>
-  store.set(id, (store.get(id) ?? []).filter((n) => n.id !== noteId));
-const deleteNoteByText = (id: string, text: string) =>
-  store.set(id, (store.get(id) ?? []).filter((n) => n.text !== text));
-
-function useInlineNotes(entityId: string) {
-  const notes = useSyncExternalStore(subscribe, () => store.get(entityId) ?? EMPTY);
-  // Adding can cascade the same note to related entities (e.g. all tests of a reason).
-  const add = useCallback((text: string, cascadeTo: string[] = []) => {
-    pushNote(entityId, text);
-    cascadeTo.forEach((id) => pushNote(id, text));
-    emit();
-  }, [entityId]);
-  // Editing cascades to the same related entities by matching the previous text.
-  const edit = useCallback((noteId: string, text: string, oldText: string, cascadeTo: string[] = []) => {
-    updateNote(entityId, noteId, text);
-    cascadeTo.forEach((id) => updateNoteByText(id, oldText, text));
-    emit();
-  }, [entityId]);
-  // Deleting cascades to the same related entities by matching note text.
-  const remove = useCallback((noteId: string, text: string, cascadeTo: string[] = []) => {
-    deleteNote(entityId, noteId);
-    cascadeTo.forEach((id) => deleteNoteByText(id, text));
-    emit();
-  }, [entityId]);
-  return { notes, add, edit, remove };
 }
 
 // ─── Inline editor (shared by add + edit flows) ───────────────────────────────
@@ -144,7 +102,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ initialValue, placeholder, onSa
 // ─── Note chip (view, + inline edit when not read-only) ───────────────────────
 
 interface NotePillProps {
-  note: NoteItem;
+  note: FailureNote;
   readOnly: boolean;
   onEdit: (text: string) => void;
   onDelete: () => void;
@@ -156,7 +114,7 @@ const NotePill: React.FC<NotePillProps> = ({ note, readOnly, onEdit, onDelete })
   if (editing) {
     return (
       <NoteEditor
-        initialValue={note.text}
+        initialValue={note.noteContent}
         placeholder="Edit note…"
         onSave={(text) => { onEdit(text); setEditing(false); }}
         onCancel={() => setEditing(false)}
@@ -187,7 +145,7 @@ const NotePill: React.FC<NotePillProps> = ({ note, readOnly, onEdit, onDelete })
         variant="caption"
         sx={{ color: "inherit", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.6 }}
       >
-        {renderNoteText(note.text)}
+        {renderNoteText(note.noteContent)}
       </Typography>
       {!readOnly && (
         <Box
@@ -213,46 +171,56 @@ const NotePill: React.FC<NotePillProps> = ({ note, readOnly, onEdit, onDelete })
 // ─── Inline notes container ───────────────────────────────────────────────────
 
 interface InlineNotesProps {
-  /** Whether the note is attached to a single test or to a failure reason. */
-  scope: NoteScope;
-  /** Stable identity of the note target. */
-  entityId: string;
+  /** Test the note is attached to. null/undefined/empty → general reason note. */
+  testName?: string | null;
+  /** The failure reason the note belongs to (DB FAILURE_REASON, NOT NULL). */
+  failureReason: string;
   /** When true (collapsed/list view): show existing chips only, no write actions. */
   readOnly?: boolean;
-  /** Extra entityIds a newly added note should also be applied to (cascade). */
-  cascadeTo?: string[];
 }
 
-const InlineNotes: React.FC<InlineNotesProps> = ({ scope, entityId, readOnly = false, cascadeTo }) => {
-  const { notes, add, edit, remove } = useInlineNotes(entityId);
+const InlineNotes: React.FC<InlineNotesProps> = ({ testName, failureReason, readOnly = false }) => {
+  const { notes, add, remove } = useNotes();
   const [adding, setAdding] = useState(false);
 
-  // Collapsed/read-only with nothing to show → render nothing.
-  if (readOnly && notes.length === 0) return null;
+  const tn = typeof testName === "string" && testName.trim() !== "" ? testName.trim() : null;
+  const reason = (failureReason ?? "").slice(0, MAX_REASON_LEN);
+  const mine = selectNotes(notes, tn, reason);
 
-  const placeholder = scope === "reason" ? "Note for this reason…" : "Note for this test…";
+  // Collapsed/read-only with nothing to show → render nothing.
+  if (readOnly && mine.length === 0) return null;
+
+  const isGeneral = tn === null;
+  const addTooltip = isGeneral
+    ? "Add a note to all tests failing with this reason"
+    : "Add a note to this specific test only";
+  const placeholder = isGeneral ? "Note for this reason…" : "Note for this test…";
+
+  const handleAdd = (text: string) => { add(tn, reason, text); setAdding(false); };
+  const handleEdit = (note: FailureNote, text: string) => { remove(note.noteId).then(() => add(tn, reason, text)); };
 
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.75 }}>
-      {notes.map((note) => (
+      {mine.map((note) => (
         <NotePill
-          key={note.id}
+          key={note.noteId}
           note={note}
           readOnly={readOnly}
-          onEdit={(text) => edit(note.id, text, note.text, cascadeTo)}
-          onDelete={() => remove(note.id, note.text, cascadeTo)}
+          onEdit={(text) => handleEdit(note, text)}
+          onDelete={() => remove(note.noteId)}
         />
       ))}
 
-      {!readOnly && (adding ? (
+      {/* Unique (TEST_NAME, FAILURE_REASON) → only offer Add when none exists yet. */}
+      {!readOnly && mine.length === 0 && (adding ? (
         <NoteEditor
           initialValue=""
           placeholder={placeholder}
-          onSave={(text) => { add(text, cascadeTo); setAdding(false); }}
+          onSave={handleAdd}
           onCancel={() => setAdding(false)}
         />
       ) : (
-        <Tooltip title="Add note">
+        <Tooltip title={addTooltip}>
           <Box
             component="button"
             type="button"

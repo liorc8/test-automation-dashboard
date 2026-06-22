@@ -60,7 +60,7 @@ const ByReasonView: React.FC<ByReasonViewProps> = ({
             {/* Collapsed: read-only reason note chips, flush right before the count + arrow. */}
             {!isExpanded && (
               <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "40%", flexShrink: 1, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
-                <InlineNotes scope="reason" entityId={`reason:${areaName ?? ""}:${idx}`} readOnly />
+                <InlineNotes testName={null} failureReason={group.reasonText} readOnly />
               </Box>
             )}
             <Box component="span" sx={{
@@ -72,15 +72,10 @@ const ByReasonView: React.FC<ByReasonViewProps> = ({
             </Box>
           </AccordionSummary>
           <AccordionDetails sx={{ p: 0 }}>
-            {/* Expanded only: the single editable reason-level Add Note action.
-                Adding/editing/deleting cascades to every child test of this reason. */}
+            {/* Expanded only: the single editable reason-level (general) Add Note action. */}
             {isExpanded && (
               <Box sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
-                <InlineNotes
-                  scope="reason"
-                  entityId={`reason:${areaName ?? ""}:${idx}`}
-                  cascadeTo={group.tests.map((t) => `test:${areaName ?? ""}:${t.testName}`)}
-                />
+                <InlineNotes testName={null} failureReason={group.reasonText} />
               </Box>
             )}
             {/* Compact rows — same layout as the By Server / By Job tabs. */}

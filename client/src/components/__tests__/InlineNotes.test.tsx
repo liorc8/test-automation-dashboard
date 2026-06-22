@@ -1,60 +1,86 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import InlineNotes from "../InlineNotes";
+import * as api from "../../services/apiService";
+import { __resetNotesCacheForTests } from "../../hooks/useNotes";
 
-// The note store is module-level and shared across instances, so each test uses a
-// unique entityId to stay isolated.
+// In-memory fake backend (test-file scoped, reset before each test).
+let db: Array<{ noteId: number; testName: string | null; failureReason: string; noteContent: string; createdAt: string | null }>;
+let seq: number;
 
-function addNote(placeholder: RegExp, text: string, scope?: HTMLElement) {
-  const root = scope ? within(scope) : screen;
-  fireEvent.click(root.getByRole("button", { name: "Add note" }));
-  fireEvent.change(root.getByPlaceholderText(placeholder), { target: { value: text } });
-  fireEvent.click(root.getByLabelText("Save note"));
+vi.mock("../../services/apiService", () => ({
+  getNotes: vi.fn(async () => db),
+  createNote: vi.fn(async (testName: string | null, failureReason: string, content: string) => {
+    const note = { noteId: ++seq, testName: testName ?? null, failureReason, noteContent: content, createdAt: null };
+    db.push(note);
+    return note;
+  }),
+  deleteNote: vi.fn(async (id: number) => { db = db.filter((n) => n.noteId !== id); }),
+}));
+
+beforeEach(() => { db = []; seq = 0; __resetNotesCacheForTests(); vi.clearAllMocks(); });
+afterEach(() => vi.unstubAllEnvs());
+
+async function addNote(text: string) {
+  fireEvent.click(screen.getByRole("button", { name: "Add note" }));
+  fireEvent.change(screen.getByPlaceholderText(/Note for this/i), { target: { value: text } });
+  fireEvent.click(screen.getByLabelText("Save note"));
 }
 
 describe("InlineNotes — visibility logic", () => {
-  it("renders Add/Edit/Delete actions in the editable (expanded) view", () => {
-    render(<InlineNotes scope="test" entityId="vis-edit" />);
-    expect(screen.getByRole("button", { name: "Add note" })).toBeInTheDocument();
+  it("renders Add/Edit/Delete actions in the editable (expanded) view", async () => {
+    render(<InlineNotes testName="Test_A" failureReason="reasonA" />);
 
-    addNote(/Note for this test/i, "remember to retry");
+    await addNote("remember to retry");
 
-    expect(screen.getByText("remember to retry")).toBeInTheDocument();
+    expect(await screen.findByText("remember to retry")).toBeInTheDocument();
     expect(screen.getByLabelText("Edit note")).toBeInTheDocument();
     expect(screen.getByLabelText("Delete note")).toBeInTheDocument();
-    // Add stays available to append more notes.
-    expect(screen.getByRole("button", { name: "Add note" })).toBeInTheDocument();
+    // Unique (test, reason) → Add hidden once a note exists.
+    expect(screen.queryByRole("button", { name: "Add note" })).toBeNull();
   });
 
-  it("read-only (collapsed) view shows labels but no write actions", () => {
-    const id = "vis-readonly";
-    // Seed a note through an editable instance...
-    const { unmount } = render(<InlineNotes scope="test" entityId={id} />);
-    addNote(/Note for this test/i, "collapsed label");
-    unmount();
+  it("read-only (collapsed) view shows labels but no write actions", async () => {
+    db = [{ noteId: 1, testName: "Test_A", failureReason: "reasonA", noteContent: "collapsed label", createdAt: null }];
+    render(<InlineNotes testName="Test_A" failureReason="reasonA" readOnly />);
 
-    // ...then the read-only view shows the chip with no Add/Edit/Delete.
-    render(<InlineNotes scope="test" entityId={id} readOnly />);
-    expect(screen.getByText("collapsed label")).toBeInTheDocument();
+    expect(await screen.findByText("collapsed label")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add note" })).toBeNull();
     expect(screen.queryByLabelText("Edit note")).toBeNull();
     expect(screen.queryByLabelText("Delete note")).toBeNull();
   });
 
   it("renders nothing in read-only mode when there are no notes", () => {
-    const { container } = render(<InlineNotes scope="test" entityId="empty-readonly" readOnly />);
+    const { container } = render(<InlineNotes testName="Test_X" failureReason="reasonX" readOnly />);
     expect(container).toBeEmptyDOMElement();
   });
 });
 
+describe("InlineNotes — backend wiring", () => {
+  it("POSTs a general reason note with null testName", async () => {
+    render(<InlineNotes failureReason="reasonA" />); // no testName → general
+
+    await addNote("shared infra issue");
+    expect(await screen.findByText("shared infra issue")).toBeInTheDocument();
+    expect(api.createNote).toHaveBeenCalledWith(null, "reasonA", "shared infra issue");
+  });
+
+  it("DELETEs a note via its id", async () => {
+    db = [{ noteId: 7, testName: "Test_A", failureReason: "reasonA", noteContent: "to delete", createdAt: null }];
+    render(<InlineNotes testName="Test_A" failureReason="reasonA" />);
+
+    fireEvent.click(await screen.findByLabelText("Delete note"));
+    expect(api.deleteNote).toHaveBeenCalledWith(7);
+  });
+});
+
 describe("InlineNotes — JIRA auto-linking", () => {
-  afterEach(() => vi.unstubAllEnvs());
+  it("turns a JIRA ticket id into a safe new-tab link", async () => {
+    render(<InlineNotes testName="Test_A" failureReason="reasonA" />);
 
-  it("turns a JIRA ticket id into a safe new-tab link", () => {
-    render(<InlineNotes scope="test" entityId="jira-static" />);
-    addNote(/Note for this test/i, "Fixes URM-88888");
+    await addNote("Fixes URM-88888");
 
-    const link = screen.getByRole("link", { name: "URM-88888" });
+    const link = await screen.findByRole("link", { name: "URM-88888" });
     expect(link.tagName).toBe("A");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
@@ -62,43 +88,15 @@ describe("InlineNotes — JIRA auto-linking", () => {
   });
 
   it("uses the mocked VITE_JIRA_BASE_URL for link hrefs", async () => {
+    // Re-evaluate the module with the env stubbed so the base URL is picked up.
     vi.resetModules();
     vi.stubEnv("VITE_JIRA_BASE_URL", "https://jira.test/browse/");
     const { default: FreshInlineNotes } = await import("../InlineNotes");
 
-    render(<FreshInlineNotes scope="test" entityId="jira-env" />);
-    addNote(/Note for this test/i, "see URM-5 for details");
+    render(<FreshInlineNotes testName="Test_A" failureReason="reasonA" />);
+    await addNote("see URM-5 for details");
 
-    const link = screen.getByRole("link", { name: "URM-5" });
+    const link = await screen.findByRole("link", { name: "URM-5" });
     expect(link).toHaveAttribute("href", "https://jira.test/browse/URM-5");
-  });
-});
-
-describe("InlineNotes — cascading logic", () => {
-  it("adding a reason note propagates to all child tests; deleting removes it from all", () => {
-    const reasonId = "reason:AREA:R1";
-    const t1 = "test:AREA:Test_A";
-    const t2 = "test:AREA:Test_B";
-
-    render(
-      <>
-        <div data-testid="reason"><InlineNotes scope="reason" entityId={reasonId} cascadeTo={[t1, t2]} /></div>
-        <div data-testid="t1"><InlineNotes scope="test" entityId={t1} readOnly /></div>
-        <div data-testid="t2"><InlineNotes scope="test" entityId={t2} readOnly /></div>
-      </>,
-    );
-
-    const reason = screen.getByTestId("reason");
-    addNote(/Note for this reason/i, "shared infra issue", reason);
-
-    // Cascaded to both child tests.
-    expect(within(screen.getByTestId("t1")).getByText("shared infra issue")).toBeInTheDocument();
-    expect(within(screen.getByTestId("t2")).getByText("shared infra issue")).toBeInTheDocument();
-
-    // Delete at the reason level cascades the removal to every child test.
-    fireEvent.click(within(reason).getByLabelText("Delete note"));
-
-    expect(within(screen.getByTestId("t1")).queryByText("shared infra issue")).toBeNull();
-    expect(within(screen.getByTestId("t2")).queryByText("shared infra issue")).toBeNull();
-  });
+  }, 15000);
 });

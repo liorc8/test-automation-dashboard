@@ -140,8 +140,8 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                     {!isOpen && (
                       <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "45%", flexShrink: 1, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
                         <InlineNotes
-                          scope="test"
-                          entityId={`test:${areaName ?? ""}:${test.testName}`}
+                          testName={test.testName}
+                          failureReason={test.failureText ?? "General"}
                           readOnly
                         />
                       </Box>

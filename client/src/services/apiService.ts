@@ -226,3 +226,40 @@ export const getTestHistory = async (
   const response = await fetch(url);
   return handleResponse(response);
 };
+
+// ─── Failure notes (FAILURE_NOTES table) ──────────────────────────────────────
+
+export type FailureNote = {
+  noteId: number;
+  testName: string | null;
+  failureReason: string;
+  noteContent: string;
+  createdAt: string | null;
+};
+
+export const getNotes = async (): Promise<FailureNote[]> => {
+  const response = await fetch(`${API_BASE_URL}/notes`);
+  return handleResponse<FailureNote[]>(response);
+};
+
+export const createNote = async (
+  testName: string | null,
+  failureReason: string,
+  content: string
+): Promise<FailureNote> => {
+  const response = await fetch(`${API_BASE_URL}/notes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ testName, failureReason, content }),
+  });
+  const data = await handleResponse<Omit<FailureNote, "createdAt">>(response);
+  return { ...data, createdAt: null };
+};
+
+export const deleteNote = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/notes/${id}`, { method: "DELETE" });
+  if (!response.ok && response.status !== 204) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+  }
+};

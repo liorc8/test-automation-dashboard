@@ -1,11 +1,26 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import ByReasonView from "../ByReasonView";
+import * as api from "../../services/apiService";
+import { __resetNotesCacheForTests } from "../../hooks/useNotes";
 import type { ReasonGroup } from "../../types/FailuresByReason";
+
+// In-memory fake notes backend.
+let db: Array<{ noteId: number; testName: string | null; failureReason: string; noteContent: string; createdAt: string | null }>;
+let seq: number;
 
 vi.mock("../../services/apiService", () => ({
   getExpandedLog: vi.fn(() => new Promise(() => {})),
+  getNotes: vi.fn(async () => db),
+  createNote: vi.fn(async (testName: string | null, failureReason: string, content: string) => {
+    const note = { noteId: ++seq, testName: testName ?? null, failureReason, noteContent: content, createdAt: null };
+    db.push(note);
+    return note;
+  }),
+  deleteNote: vi.fn(async (id: number) => { db = db.filter((n) => n.noteId !== id); }),
 }));
+
+beforeEach(() => { db = []; seq = 0; __resetNotesCacheForTests(); vi.clearAllMocks(); });
 
 const reasons: ReasonGroup[] = [
   {
@@ -18,11 +33,11 @@ const reasons: ReasonGroup[] = [
   },
 ];
 
-function renderView(areaName = "LOD") {
+function renderView() {
   return render(
     <ByReasonView
       reasons={reasons}
-      areaName={areaName}
+      areaName="LOD"
       onImageClick={() => {}}
       onExpandLog={() => {}}
       onOpenHistory={() => {}}
@@ -31,7 +46,7 @@ function renderView(areaName = "LOD") {
   );
 }
 
-function addReasonNote(region: HTMLElement, text: string) {
+async function addReasonNote(region: HTMLElement, text: string) {
   fireEvent.click(within(region).getByRole("button", { name: "Add note" }));
   fireEvent.change(within(region).getByPlaceholderText(/Note for this reason/i), { target: { value: text } });
   fireEvent.click(within(region).getByLabelText("Save note"));
@@ -51,39 +66,24 @@ describe("ByReasonView", () => {
 
     fireEvent.click(summary);
     expect(summary).toHaveAttribute("aria-expanded", "true");
-    // After expanding, the grouped tests are shown.
     const region = screen.getByRole("region");
     expect(within(region).getByText("Test_A")).toBeInTheDocument();
   });
 });
 
 describe("ByReasonView — inline notes", () => {
-  it("shows the reason note label when collapsed but hides the write actions", () => {
-    renderView("BR1");
+  it("adds a general reason note (null testName) and shows it collapsed without write actions", async () => {
+    renderView();
     const summary = screen.getByRole("button", { name: /FATAL element not found/i });
 
-    fireEvent.click(summary); // expand → reason-level Add note action is available
-    addReasonNote(screen.getByRole("region"), "infra note");
+    fireEvent.click(summary); // expand → reason-level Add note action available
+    await addReasonNote(screen.getByRole("region"), "infra note");
+    expect(await screen.findByText("infra note")).toBeInTheDocument();
+    expect(api.createNote).toHaveBeenCalledWith(null, "FATAL element not found", "infra note");
 
     fireEvent.click(summary); // collapse
     expect(summary).toHaveAttribute("aria-expanded", "false");
-    // Label stays readable in the collapsed list view…
-    expect(screen.getAllByText("infra note").length).toBeGreaterThan(0);
-    // …but no write actions are rendered while collapsed.
-    expect(screen.queryByRole("button", { name: "Add note" })).toBeNull();
-  });
-
-  it("cascades an added reason note to all child test rows and clears them on delete", () => {
-    renderView("BR2");
-    const summary = screen.getByRole("button", { name: /FATAL element not found/i });
-    fireEvent.click(summary);
-    const region = screen.getByRole("region");
-
-    addReasonNote(region, "cascade-xyz");
-    // Reason chip + Test_A row chip + Test_B row chip.
-    expect(screen.getAllByText("cascade-xyz")).toHaveLength(3);
-
-    fireEvent.click(within(region).getByLabelText("Delete note"));
-    expect(screen.queryByText("cascade-xyz")).toBeNull();
+    expect(screen.getByText("infra note")).toBeInTheDocument();          // label still readable
+    expect(screen.queryByRole("button", { name: "Add note" })).toBeNull(); // no write actions
   });
 });

@@ -136,13 +136,13 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                     <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
                       {test.testName}
                     </Typography>
-                    {/* Collapsed list view: read-only note chips, flush right next to the actions. */}
+                    {/* List view: notes + Add control on the far right of the row. */}
                     {!isOpen && (
-                      <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "45%", flexShrink: 1, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
+                      <Box sx={{ ml: "auto", mr: 1, display: "flex", minWidth: 0, maxWidth: "55%", overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
                         <InlineNotes
                           testName={test.testName}
                           failureReason={test.failureText ?? "General"}
-                          readOnly
+                          isListView
                         />
                       </Box>
                     )}

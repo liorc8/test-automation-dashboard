@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getNotes, createNote, deleteNote, NoteConflictError } from "../services/notesService";
+import { getNotes, createNote, deleteNote, NoteLimitError } from "../services/notesService";
 
 export const getNotesHandler = async (_req: Request, res: Response) => {
   try {
@@ -34,8 +34,8 @@ export const createNoteHandler = async (req: Request, res: Response) => {
       noteContent: content.trim(),
     });
   } catch (error) {
-    if (error instanceof NoteConflictError) {
-      return res.status(409).json({ error: error.message });
+    if (error instanceof NoteLimitError) {
+      return res.status(400).json({ error: error.message });
     }
     console.error("Error creating note:", error);
     return res.status(500).json({ error: "Internal Server Error" });

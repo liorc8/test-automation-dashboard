@@ -9,15 +9,14 @@ export type FailureNote = {
   createdAt: string | null;
 };
 
-export class NoteConflictError extends Error {
-  constructor(message = "A note already exists for this test/reason.") {
+export const MAX_NOTES_PER_ITEM = 5;
+
+export class NoteLimitError extends Error {
+  constructor(message = `Maximum of ${MAX_NOTES_PER_ITEM} notes per item reached.`) {
     super(message);
-    this.name = "NoteConflictError";
+    this.name = "NoteLimitError";
   }
 }
-
-// Oracle unique-constraint violation code.
-const ORA_UNIQUE_VIOLATION = 1;
 
 export async function getNotes(): Promise<FailureNote[]> {
   const sql = `
@@ -42,32 +41,38 @@ export async function createNote(
   failureReason: string,
   content: string
 ): Promise<number> {
+  // Multiple notes per (TEST_NAME, FAILURE_REASON) are allowed, capped at 5.
+  const countRes = await execute(
+    `SELECT COUNT(*) AS CNT
+     FROM FAILURE_NOTES
+     WHERE FAILURE_REASON = :failureReason
+       AND ((:testName IS NULL AND TEST_NAME IS NULL) OR TEST_NAME = :testName)`,
+    { failureReason, testName }
+  );
+  const count = Number((countRes.rows?.[0] as any)?.CNT ?? 0);
+  if (count >= MAX_NOTES_PER_ITEM) {
+    throw new NoteLimitError();
+  }
+
   const sql = `
     INSERT INTO FAILURE_NOTES (TEST_NAME, FAILURE_REASON, NOTE_CONTENT)
     VALUES (:testName, :failureReason, :content)
     RETURNING NOTE_ID INTO :noteId
   `;
 
-  try {
-    const res = await execute(
-      sql,
-      {
-        testName,
-        failureReason,
-        content,
-        noteId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
-      },
-      { autoCommit: true }
-    );
+  const res = await execute(
+    sql,
+    {
+      testName,
+      failureReason,
+      content,
+      noteId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+    },
+    { autoCommit: true }
+  );
 
-    const outBinds = res.outBinds as { noteId: number[] } | undefined;
-    return Number(outBinds?.noteId?.[0]);
-  } catch (err: any) {
-    if (err?.errorNum === ORA_UNIQUE_VIOLATION) {
-      throw new NoteConflictError();
-    }
-    throw err;
-  }
+  const outBinds = res.outBinds as { noteId: number[] } | undefined;
+  return Number(outBinds?.noteId?.[0]);
 }
 
 export async function deleteNote(id: number): Promise<boolean> {

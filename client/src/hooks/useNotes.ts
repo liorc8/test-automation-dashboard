@@ -39,14 +39,45 @@ export function __resetNotesCacheForTests() {
 
 const sameTest = (a: string | null, b: string | null) => (a ?? null) === (b ?? null);
 
+// FAILURE_REASON column is VARCHAR2(1000); normalize the key the same way writes do.
+const MAX_REASON_LEN = 1000;
+const normTest = (t: string | null | undefined) => (typeof t === "string" && t.trim() !== "" ? t.trim() : null);
+// Permissive key for cross-tab matching: strip ALL non-alphanumerics + lowercase.
+const reasonKey = (r: string | null | undefined) => (r ?? "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, MAX_REASON_LEN);
+
 /** Notes matching a given (testName, failureReason) pair. testName null = general reason note. */
 export function selectNotes(all: FailureNote[], testName: string | null, failureReason: string): FailureNote[] {
   return all.filter((n) => sameTest(n.testName, testName) && n.failureReason === failureReason);
 }
 
+/**
+ * Relational getter: returns BOTH the item's private notes AND the global
+ * (testName null) notes for the same failure reason. Used by every test row /
+ * reason block so global notes cascade universally.
+ */
+export function getNotesForItem(all: FailureNote[], testName: string | null | undefined, failureReason: string): FailureNote[] {
+  const tn = normTest(testName);
+  const target = reasonKey(failureReason);
+  // Permissive match: equal OR either side contains the other (endpoints format
+  // the same reason differently across tabs).
+  const reasonMatches = (other: string) => {
+    const nk = reasonKey(other);
+    if (!nk || !target) return nk === target;
+    return nk === target || nk.includes(target) || target.includes(nk);
+  };
+  return all.filter(
+    (n) => (n.testName === tn || n.testName === null) && reasonMatches(n.failureReason)
+  );
+}
+
 export function useNotes() {
   const all = useSyncExternalStore(subscribe, () => notes);
   useEffect(() => { ensureLoaded(); }, []);
+
+  const notesForItem = useCallback(
+    (testName: string | null | undefined, failureReason: string) => getNotesForItem(all, testName, failureReason),
+    [all]
+  );
 
   const add = useCallback(async (testName: string | null, failureReason: string, content: string) => {
     try {
@@ -68,5 +99,5 @@ export function useNotes() {
     }
   }, []);
 
-  return { notes: all, add, remove };
+  return { notes: all, add, remove, notesForItem };
 }

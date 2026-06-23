@@ -14,11 +14,13 @@ interface FailureRowListProps {
   onOpenHistory: (testName: string) => void;
   testRailUrlFor: (testName: string) => string | null;
   areaName?: string;
+  /** Reason this list is grouped under (By Reason tab) — cascades global notes to rows. */
+  reasonContext?: string;
 }
 
 /** Compact, expandable list of failures (same look as the List View tab). */
 const FailureRowList: React.FC<FailureRowListProps> = ({
-  items, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, areaName,
+  items, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, areaName, reasonContext,
 }) => {
   const [openTestName, setOpenTestName] = useState<string | null>(null);
 
@@ -49,13 +51,13 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
               <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
                 {item.testName}
               </Typography>
-              {/* Collapsed list view: read-only note chips, flush right next to the actions. */}
+              {/* List view: notes + Add control on the far right of the row. */}
               {!isOpen && (
-                <Box sx={{ ml: "auto", display: "flex", minWidth: 0, maxWidth: "45%", flexShrink: 1, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
+                <Box sx={{ ml: "auto", mr: 1, display: "flex", minWidth: 0, maxWidth: "55%", overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
                   <InlineNotes
                     testName={item.testName}
-                    failureReason={item.reasons[0]?.text ?? "General"}
-                    readOnly
+                    failureReason={reasonContext ?? item.reasons[0]?.text ?? "General"}
+                    isListView
                   />
                 </Box>
               )}
@@ -112,6 +114,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
                   onOpenHistory={() => onOpenHistory(item.testName)}
                   testRailUrl={trUrl}
                   areaName={areaName}
+                  reasonContext={reasonContext}
                 />
               </Box>
             </Collapse>

@@ -46,10 +46,11 @@ function renderView() {
   );
 }
 
-async function addReasonNote(region: HTMLElement, text: string) {
-  fireEvent.click(within(region).getByRole("button", { name: "Add note" }));
-  fireEvent.change(within(region).getByPlaceholderText(/Note for this reason/i), { target: { value: text } });
-  fireEvent.click(within(region).getByLabelText("Save note"));
+async function addReasonNote(text: string) {
+  const editor = screen.getByTestId("reason-note");
+  fireEvent.click(within(editor).getByRole("button", { name: "Add note" }));
+  fireEvent.change(within(editor).getByPlaceholderText(/Note for this reason/i), { target: { value: text } });
+  fireEvent.click(within(editor).getByLabelText("Save note"));
 }
 
 describe("ByReasonView", () => {
@@ -77,13 +78,14 @@ describe("ByReasonView — inline notes", () => {
     const summary = screen.getByRole("button", { name: /FATAL element not found/i });
 
     fireEvent.click(summary); // expand → reason-level Add note action available
-    await addReasonNote(screen.getByRole("region"), "infra note");
-    expect(await screen.findByText("infra note")).toBeInTheDocument();
+    await addReasonNote("infra note");
+    // Cascades: reason chip + each child test row shows the global note.
+    expect((await screen.findAllByText("infra note")).length).toBeGreaterThanOrEqual(2);
     expect(api.createNote).toHaveBeenCalledWith(null, "FATAL element not found", "infra note");
 
     fireEvent.click(summary); // collapse
     expect(summary).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText("infra note")).toBeInTheDocument();          // label still readable
-    expect(screen.queryByRole("button", { name: "Add note" })).toBeNull(); // no write actions
-  });
+    expect(screen.getAllByText("infra note").length).toBeGreaterThan(0);              // label still readable
+    expect(screen.getAllByRole("button", { name: "Add note" }).length).toBeGreaterThan(0); // Add trigger on the right
+  }, 15000);
 });

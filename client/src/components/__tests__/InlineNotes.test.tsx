@@ -36,8 +36,8 @@ describe("InlineNotes — visibility logic", () => {
     expect(await screen.findByText("remember to retry")).toBeInTheDocument();
     expect(screen.getByLabelText("Edit note")).toBeInTheDocument();
     expect(screen.getByLabelText("Delete note")).toBeInTheDocument();
-    // Unique (test, reason) → Add hidden once a note exists.
-    expect(screen.queryByRole("button", { name: "Add note" })).toBeNull();
+    // Multiple notes allowed → Add stays available after the first note.
+    expect(screen.getByRole("button", { name: "Add note" })).toBeInTheDocument();
   });
 
   it("read-only (collapsed) view shows labels but no write actions", async () => {
@@ -63,6 +63,17 @@ describe("InlineNotes — backend wiring", () => {
     await addNote("shared infra issue");
     expect(await screen.findByText("shared infra issue")).toBeInTheDocument();
     expect(api.createNote).toHaveBeenCalledWith(null, "reasonA", "shared infra issue");
+  });
+
+  it("displays global (testName null) notes as read-only inherited on a specific test", async () => {
+    db = [{ noteId: 9, testName: null, failureReason: "reasonA", noteContent: "global infra", createdAt: null }];
+    render(<InlineNotes testName="Test_A" failureReason="reasonA" />);
+
+    expect(await screen.findByText("global infra")).toBeInTheDocument();
+    // Inherited globals are not editable from the test view…
+    expect(screen.queryByLabelText("Edit note")).toBeNull();
+    // …but the test still offers its own Add note.
+    expect(screen.getByRole("button", { name: "Add note" })).toBeInTheDocument();
   });
 
   it("DELETEs a note via its id", async () => {

@@ -6,6 +6,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import ScreenshotPanel from "./ScreenshotPanel";
 import InlineNotes from "./InlineNotes";
+import { useNotes } from "../hooks/useNotes";
 import {
   WINDOW_DAYS,
   renderLogLines,
@@ -46,9 +47,11 @@ interface ReasonBlockProps {
   testName: string;
   onExpandLog: (lines: string[], label: string) => void;
   extraActions?: React.ReactNode;
+  /** Primary reason hides its notes here because they render under the test name. */
+  hideNotes?: boolean;
 }
 
-const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onExpandLog, extraActions }) => {
+const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onExpandLog, extraActions, hideNotes }) => {
   const previewLines = extractFatalPreview(reason.text ?? "");
   const [logLoading, setLogLoading] = useState(false);
 
@@ -109,6 +112,13 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onEx
         )}
         {extraActions}
       </Box>
+
+      {/* Notes for THIS specific reason — its own block directly below the reason. */}
+      {!hideNotes && (
+        <div style={{ display: "block", marginTop: "8px", textAlign: "left" }}>
+          <InlineNotes testName={testName} failureReason={reason.text ?? "General"} />
+        </div>
+      )}
     </Box>
   );
 };
@@ -123,14 +133,25 @@ interface FailureCardProps {
   onOpenHistory: () => void;
   testRailUrl?: string | null;
   areaName?: string;
+  /** Reason this card is grouped under (By Reason tab) — surfaces cascaded global notes. */
+  reasonContext?: string;
 }
 
-const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl }) => {
+const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, reasonContext }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = item.reasons[0] ?? null;
   const extra = item.reasons.slice(1, 3);
   const screenshotSrc = item.reasons[0]?.screenshotLink ?? item.lastFailure.screenshotLink ?? null;
   const color = severityColor(item.failCount);
+
+  // DEBUG: surface the exact reason strings so we can see why cross-tab matching fails.
+  const { notes } = useNotes();
+  console.log("DEBUG REASON MATCH:", {
+    testName: item.testName,
+    testReason: item.reasons.map((r) => r.text),
+    reasonContext,
+    globalNotes: notes.filter((n) => n.testName === null).map((n) => ({ failureReason: n.failureReason, noteContent: n.noteContent })),
+  });
 
   // History + TestRail, rendered alongside Expand Log / Full Log in a single row.
   const actionButtons = (
@@ -212,8 +233,20 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
           </Box>
         </Box>
 
-        {/* Test-level notes */}
-        <InlineNotes testName={item.testName} failureReason={item.reasons[0]?.text ?? "General"} />
+        {/* Add Note for the main test — its own block directly below the title. */}
+        {reasonContext && !item.reasons.some((r) => (r.text ?? "General") === reasonContext) ? (
+          <div style={{ display: "block", marginTop: "8px", textAlign: "left" }}>
+            <InlineNotes testName={item.testName} failureReason={reasonContext} />
+          </div>
+        ) : item.reasons.length === 0 ? (
+          <div style={{ display: "block", marginTop: "8px", textAlign: "left" }}>
+            <InlineNotes testName={item.testName} failureReason="General" />
+          </div>
+        ) : (
+          <div style={{ display: "block", marginTop: "8px", textAlign: "left" }}>
+            <InlineNotes testName={item.testName} failureReason={item.reasons[0]?.text ?? "General"} />
+          </div>
+        )}
 
         {/* Primary reason — its action row also hosts History + TestRail so all
             buttons (Expand Log, Full Log, History, TR) sit side by side. */}
@@ -231,7 +264,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
             </Box>
             <ReasonBlock reason={primary} label="Primary Reason" testName={item.testName}
               onExpandLog={(lines, label) => onExpandLog(lines, item.testName, label)}
-              extraActions={actionButtons} />
+              extraActions={actionButtons} hideNotes />
           </Box>
         ) : (
           <Box sx={{ display: "flex", gap: 0.875, flexWrap: "wrap", pt: 0.5 }}>

@@ -36,6 +36,28 @@ describe("SearchWithHistory", () => {
     expect(onSearch).toHaveBeenCalledWith("alpha");
   });
 
+  it("does NOT save typed text on Enter by default (Home page behaviour)", () => {
+    render(<SearchWithHistory value="my typed query" onSearch={() => {}} storageKey={KEY} placeholder="Search…" />);
+    fireEvent.keyDown(screen.getByPlaceholderText("Search…"), { key: "Enter" });
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+
+  it("saves the raw typed query on Enter when saveTypedQueries is set (Recent Failures behaviour)", () => {
+    render(<SearchWithHistory value="flaky login" onSearch={() => {}} storageKey={KEY} placeholder="Search…" saveTypedQueries />);
+    fireEvent.keyDown(screen.getByPlaceholderText("Search…"), { key: "Enter" });
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual(["flaky login"]);
+  });
+
+  it("keeps independent history per storage key", () => {
+    const KEY_RECENT = "recent-failures-query-text-history";
+    const KEY_HOME = "dashboard-search-history";
+    render(<SearchWithHistory value="typed on recent" onSearch={() => {}} storageKey={KEY_RECENT} placeholder="Recent" saveTypedQueries />);
+    fireEvent.keyDown(screen.getByPlaceholderText("Recent"), { key: "Enter" });
+
+    expect(JSON.parse(localStorage.getItem(KEY_RECENT)!)).toEqual(["typed on recent"]);
+    expect(localStorage.getItem(KEY_HOME)).toBeNull(); // Home's history is untouched
+  });
+
   it("removes a single history item via its X button without closing the dropdown", () => {
     seed(["alpha", "beta"]);
     render(<SearchWithHistory value="" onSearch={() => {}} storageKey={KEY} placeholder="Search…" />);

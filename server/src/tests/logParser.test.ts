@@ -37,6 +37,46 @@ describe("logParserService.expandLog", () => {
     }
   });
 
+  it("anchors on 'Java heap space' (OOM crash without a FATAL line)", async () => {
+    const raw = [
+      "preamble line",
+      "Running TESTNAME_X now",
+      "doing stuff",
+      "java.lang.OutOfMemoryError: Java heap space",
+      "trailing line",
+    ].join("\n");
+    mockFetch(raw);
+
+    const result = await expandLog("http://jenkins/job/A/1/heap-space", "TESTNAME_X");
+
+    expect(result.available).toBe(true);
+    if (result.available) {
+      expect(result.source).toBe("parsed");
+      expect(result.lines).toEqual([
+        "Running TESTNAME_X now",
+        "doing stuff",
+        "java.lang.OutOfMemoryError: Java heap space",
+      ]);
+    }
+  });
+
+  it("anchors on 'OutOfMemoryError'", async () => {
+    const raw = [
+      "Running TESTNAME_Y now",
+      "allocating buffers",
+      "java.lang.OutOfMemoryError: GC overhead limit exceeded",
+    ].join("\n");
+    mockFetch(raw);
+
+    const result = await expandLog("http://jenkins/job/A/1/oom", "TESTNAME_Y");
+
+    expect(result.available).toBe(true);
+    if (result.available) {
+      expect(result.source).toBe("parsed");
+      expect(result.lines[result.lines.length - 1]).toContain("OutOfMemoryError");
+    }
+  });
+
   it("falls back to the last 100 lines when no FATAL is present", async () => {
     const raw = Array.from({ length: 150 }, (_, i) => `log line ${i + 1}`).join("\n");
     mockFetch(raw);

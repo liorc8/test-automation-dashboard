@@ -13,6 +13,7 @@ export type LatestFailedTestItem = {
   screenshotLink: string | null;
   almaVersion: string | null;
   buildNumber: number | null;
+  duration: number | null;
 };
 
 export type LatestFailedByServer = {
@@ -41,6 +42,7 @@ WITH latest_run AS (
     PASSED,
     TESTEDON,
     ENDINGTIMEUNIX,
+    TOTALRUNTIME,
     ROW_NUMBER() OVER (
       PARTITION BY TESTNAME
       ORDER BY TESTEDON DESC, NVL(ENDINGTIMEUNIX, 0) DESC
@@ -58,7 +60,8 @@ SELECT
   SCREENSHOTLINK,
   FAILURETEXT,
   TESTEDON,
-  ENDINGTIMEUNIX
+  ENDINGTIMEUNIX,
+  TOTALRUNTIME
 FROM latest_run
 WHERE RN = 1
   AND LOWER(PASSED) = 'false'
@@ -108,6 +111,7 @@ export async function getAreaLatestFailed(
       screenshotLink: (r.SCREENSHOTLINK ?? null) as string | null,
       almaVersion: (r.ALMAVERSION ?? null) as string | null,
       buildNumber: toNumber(r.BUILDNUMBER),
+      duration: toNumber(r.TOTALRUNTIME),
     };
 
     if (!serverMap.has(server)) {

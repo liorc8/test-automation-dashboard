@@ -3,10 +3,13 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import FailureCard from "../FailureCard";
 import type { RecentFailureGroupedItem } from "../../types/RecentFailuresGrouped";
 
-// Mock the API so "Expand Log" never hits the network.
+// Mock the API so "Expand Log" never hits the network and notes don't fetch live.
 vi.mock("../../services/apiService", () => ({
   // Pending promise keeps the loading state visible for assertion.
   getExpandedLog: vi.fn(() => new Promise(() => {})),
+  getNotes: vi.fn(async () => []),
+  createNote: vi.fn(async () => ({ noteId: 1, testName: null, failureReason: "r", noteContent: "c", createdAt: null })),
+  deleteNote: vi.fn(async () => {}),
 }));
 
 const item: RecentFailureGroupedItem = {
@@ -64,5 +67,11 @@ describe("FailureCard", () => {
     renderCard();
     fireEvent.click(screen.getByRole("button", { name: /expand log/i }));
     expect(await screen.findByText(/loading/i)).toBeInTheDocument();
+  });
+
+  it("renders the inline notes Add control without crashing", () => {
+    renderCard();
+    // The notes area is wired through useNotes — the card must render its Add control.
+    expect(screen.getAllByRole("button", { name: /add note/i }).length).toBeGreaterThan(0);
   });
 });

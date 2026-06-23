@@ -8,11 +8,7 @@ import { useTestRailIds } from "../hooks/useTestRailIds";
 import ThemeToggle from "../components/ThemeToggle";
 import type { TestHistoryResponse, TestHistoryRow } from "../types/TestHistory";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-
-function dateOnly(value: string | null | undefined): string | null {
-    if (!value) return null;
-    return value.split("T")[0].split(" ")[0];
-}
+import { formatDateOnly, extractFatalLine } from "../components/failureHelpers";
 
 const TestHistoryPage: React.FC = () => {
     const { areaName, testName } = useParams<{ areaName: string; testName: string }>();
@@ -155,10 +151,12 @@ const TestHistoryPage: React.FC = () => {
                                             <TableBody>
                                                 {rows.map((r: TestHistoryRow, i: number) => (
                                                     <TableRow key={i} sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                                                        <TableCell sx={{ fontSize: 13 }}>{dateOnly(r.testedOn) ?? "-"}</TableCell>
+                                                        <TableCell sx={{ fontSize: 13, whiteSpace: "nowrap" }}>
+                                                            {formatDateOnly(r.testedOn) ?? "-"}
+                                                        </TableCell>
                                                         <TableCell align="center">{r.passed ? <Box sx={{ color: "#2e7d32", fontWeight: 700 }}>PASS</Box> : <Box sx={{ color: "#c62828", fontWeight: 700 }}>FAIL</Box>}</TableCell>
                                                         <TableCell sx={{ fontSize: 12 }}>{r.almaVersion ?? "-"}</TableCell>
-                                                        <TableCell sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>{r.failureText ? r.failureText.slice(0, 350) : "-"}</TableCell>
+                                                        <TableCell sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, whiteSpace: "pre-wrap", wordBreak: "break-word", maxWidth: 600 }}>{r.failureText ? extractFatalLine(r.failureText) : "-"}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>

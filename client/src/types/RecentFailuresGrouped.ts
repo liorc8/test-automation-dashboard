@@ -17,6 +17,8 @@ export type RecentFailureGroupedItem = {
     buildNumber: number | null;
     logLink: string | null;
     screenshotLink: string | null;
+    /** TOTALRUNTIME from Oracle — consumed by formatDuration in the FailureCard. */
+    duration?: number | null;
   };
 };
 

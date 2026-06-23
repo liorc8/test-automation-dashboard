@@ -16,10 +16,12 @@ interface SearchWithHistoryProps {
   placeholder?: string;
   fullWidth?: boolean;
   sx?: SxProps<Theme>;
+  /** When true, pressing Enter saves the raw typed query to history. */
+  saveTypedQueries?: boolean;
 }
 
 const SearchWithHistory: React.FC<SearchWithHistoryProps> = ({
-  value, onSearch, storageKey, placeholder = "Search…", fullWidth = false, sx,
+  value, onSearch, storageKey, placeholder = "Search…", fullWidth = false, sx, saveTypedQueries = false,
 }) => {
   const { history, remove, push } = useSearchHistory(storageKey);
   const [open, setOpen] = useState(false);
@@ -41,6 +43,12 @@ const SearchWithHistory: React.FC<SearchWithHistoryProps> = ({
           onFocus={() => setOpen(true)}
           onClick={() => setOpen(true)}
           onChange={(e) => onSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (saveTypedQueries && e.key === "Enter" && value.trim()) {
+              push(value);
+              setOpen(false);
+            }
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">

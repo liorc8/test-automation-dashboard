@@ -12,6 +12,7 @@ WITH failures AS (
     TESTNAME,
     TESTEDON,
     ENDINGTIMEUNIX,
+    TOTALRUNTIME,
     SERVER,
     ALMAVERSION,
     BUILDNUMBER,
@@ -158,7 +159,8 @@ FROM (
     lf.ALMAVERSION,
     lf.BUILDNUMBER,
     lf.LOGLINK,
-    lf.SCREENSHOTLINK
+    lf.SCREENSHOTLINK,
+    lf.TOTALRUNTIME
   FROM test_stats s
   LEFT JOIN top_reasons tr ON tr.TESTNAME = s.TESTNAME
   LEFT JOIN last_failure lf ON lf.TESTNAME = s.TESTNAME
@@ -250,6 +252,8 @@ export async function getAreaRecentFailuresGrouped(
         buildNumber: toNumber(r.BUILDNUMBER),
         logLink,
         screenshotLink,
+        // TOTALRUNTIME from Oracle — exposed as `duration` for the FailureCard.
+        duration: toNumber(r.TOTALRUNTIME),
       },
     };
   });

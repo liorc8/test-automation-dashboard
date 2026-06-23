@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { Box, Typography, Button, Paper, Collapse } from "@mui/material";
+import { Box, Typography, Button, Paper, Collapse, IconButton, Tooltip } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import FailureCard from "./FailureCard";
-import TestNoteButton from "./TestNoteButton";
-import TestNoteDisplay from "./TestNoteDisplay";
+import InlineNotes from "./InlineNotes";
 import type { RecentFailureGroupedItem } from "../types/RecentFailuresGrouped";
 
 interface FailureRowListProps {
@@ -15,11 +15,13 @@ interface FailureRowListProps {
   onOpenHistory: (testName: string) => void;
   testRailUrlFor: (testName: string) => string | null;
   areaName?: string;
+  /** Reason this list is grouped under (By Reason tab) — cascades global notes to rows. */
+  reasonContext?: string;
 }
 
 /** Compact, expandable list of failures (same look as the List View tab). */
 const FailureRowList: React.FC<FailureRowListProps> = ({
-  items, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, areaName,
+  items, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, areaName, reasonContext,
 }) => {
   const [openTestName, setOpenTestName] = useState<string | null>(null);
 
@@ -47,10 +49,29 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
               }}
             >
               <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#ef4444", flexShrink: 0 }} />
-              <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
+              <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", minWidth: 0, flexShrink: 1, maxWidth: "55%", wordBreak: "break-all" }}>
                 {item.testName}
               </Typography>
-              <TestNoteButton areaName={areaName} testName={item.testName} stopPropagation />
+              <Tooltip title="Copy test name">
+                <IconButton
+                  size="small"
+                  aria-label="Copy test name"
+                  onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(item.testName); }}
+                  sx={{ flexShrink: 0, p: 0.25, ml: 0.25, color: "text.disabled", "&:hover": { color: "text.secondary" } }}
+                >
+                  <ContentCopyIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
+              {/* List view: notes + Add control on the far right of the row. */}
+              {!isOpen && (
+                <Box sx={{ ml: "auto", mr: 1, display: "flex", minWidth: 0, maxWidth: "55%", overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
+                  <InlineNotes
+                    testName={item.testName}
+                    failureReason={reasonContext ?? item.reasons[0]?.text ?? "General"}
+                    isListView
+                  />
+                </Box>
+              )}
               {trUrl && (
                 <Button
                   size="small"
@@ -62,7 +83,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
                   onClick={(e) => e.stopPropagation()}
                   sx={{
                     borderColor: "#cbd5e1", color: "#475569", textTransform: "none",
-                    fontSize: 11, py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
+                    fontSize: 11, py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4, flexShrink: 0,
                     "&:hover": { borderColor: "#94a3b8", bgcolor: "background.paper", color: "text.primary" },
                   }}
                 >
@@ -76,7 +97,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
                 onClick={(e) => { e.stopPropagation(); onOpenHistory(item.testName); }}
                 sx={{
                   borderColor: "#cbd5e1", color: "#475569", textTransform: "none",
-                  fontSize: 11, py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4,
+                  fontSize: 11, py: "3px", px: "10px", minHeight: 0, lineHeight: 1.4, flexShrink: 0,
                   "&:hover": { borderColor: "#94a3b8", bgcolor: "background.paper", color: "text.primary" },
                 }}
               >
@@ -87,10 +108,6 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
                 transition: "transform 0.22s ease",
                 transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
               }} />
-            </Box>
-
-            <Box sx={{ px: 2, "&:not(:empty)": { pb: 1.25 } }}>
-              <TestNoteDisplay areaName={areaName} testName={item.testName} />
             </Box>
 
             <Collapse in={isOpen} unmountOnExit>
@@ -108,6 +125,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
                   onOpenHistory={() => onOpenHistory(item.testName)}
                   testRailUrl={trUrl}
                   areaName={areaName}
+                  reasonContext={reasonContext}
                 />
               </Box>
             </Collapse>

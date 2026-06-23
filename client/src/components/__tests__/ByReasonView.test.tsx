@@ -1,11 +1,26 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import ByReasonView from "../ByReasonView";
+import * as api from "../../services/apiService";
+import { __resetNotesCacheForTests } from "../../hooks/useNotes";
 import type { ReasonGroup } from "../../types/FailuresByReason";
+
+// In-memory fake notes backend.
+let db: Array<{ noteId: number; testName: string | null; failureReason: string; noteContent: string; createdAt: string | null }>;
+let seq: number;
 
 vi.mock("../../services/apiService", () => ({
   getExpandedLog: vi.fn(() => new Promise(() => {})),
+  getNotes: vi.fn(async () => db),
+  createNote: vi.fn(async (testName: string | null, failureReason: string, content: string) => {
+    const note = { noteId: ++seq, testName: testName ?? null, failureReason, noteContent: content, createdAt: null };
+    db.push(note);
+    return note;
+  }),
+  deleteNote: vi.fn(async (id: number) => { db = db.filter((n) => n.noteId !== id); }),
 }));
+
+beforeEach(() => { db = []; seq = 0; __resetNotesCacheForTests(); vi.clearAllMocks(); });
 
 const reasons: ReasonGroup[] = [
   {
@@ -31,6 +46,13 @@ function renderView() {
   );
 }
 
+async function addReasonNote(text: string) {
+  const editor = screen.getByTestId("reason-note");
+  fireEvent.click(within(editor).getByRole("button", { name: "Add note" }));
+  fireEvent.change(within(editor).getByPlaceholderText(/Note for this reason/i), { target: { value: text } });
+  fireEvent.click(within(editor).getByLabelText("Save note"));
+}
+
 describe("ByReasonView", () => {
   it("renders the reason header and affected-test badge", () => {
     renderView();
@@ -45,8 +67,25 @@ describe("ByReasonView", () => {
 
     fireEvent.click(summary);
     expect(summary).toHaveAttribute("aria-expanded", "true");
-    // After expanding, the grouped tests are shown.
     const region = screen.getByRole("region");
     expect(within(region).getByText("Test_A")).toBeInTheDocument();
   });
+});
+
+describe("ByReasonView — inline notes", () => {
+  it("adds a general reason note (null testName) and shows it collapsed without write actions", async () => {
+    renderView();
+    const summary = screen.getByRole("button", { name: /FATAL element not found/i });
+
+    fireEvent.click(summary); // expand → reason-level Add note action available
+    await addReasonNote("infra note");
+    // Cascades: reason chip + each child test row shows the global note.
+    expect((await screen.findAllByText("infra note")).length).toBeGreaterThanOrEqual(2);
+    expect(api.createNote).toHaveBeenCalledWith(null, "FATAL element not found", "infra note");
+
+    fireEvent.click(summary); // collapse
+    expect(summary).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getAllByText("infra note").length).toBeGreaterThan(0);              // label still readable
+    expect(screen.getAllByRole("button", { name: "Add note" }).length).toBeGreaterThan(0); // Add trigger on the right
+  }, 15000);
 });

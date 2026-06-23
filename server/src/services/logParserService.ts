@@ -14,13 +14,19 @@ function lastN(lines: string[], n: number): string[] {
   return lines.slice(Math.max(0, lines.length - n));
 }
 
-// Extract the block from the testName line down to the FATAL line (inclusive).
+// Error anchors: FATAL plus JVM out-of-memory crashes (which often have no FATAL line).
+const ERROR_MARKERS = ["FATAL", "OutOfMemoryError", "Java heap space"];
+function isErrorLine(line: string): boolean {
+  return ERROR_MARKERS.some((m) => line.includes(m));
+}
+
+// Extract the block from the testName line down to the error line (inclusive).
 function parseBlock(rawText: string, testName: string): { lines: string[]; source: "parsed" | "fallback" } {
   const lines = rawText.split(/\r?\n/);
 
   let fatalIdx = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("FATAL")) { fatalIdx = i; break; }
+    if (isErrorLine(lines[i])) { fatalIdx = i; break; }
   }
   if (fatalIdx === -1) return { lines: lastN(lines, 100), source: "fallback" };
 

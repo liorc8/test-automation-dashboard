@@ -2,17 +2,19 @@ import React, { useState } from "react";
 import { Box, Typography, Button, Card, CardContent, Chip, Collapse, CircularProgress } from "@mui/material";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import ScreenshotPanel from "./ScreenshotPanel";
-import TestNoteButton from "./TestNoteButton";
-import TestNoteDisplay from "./TestNoteDisplay";
+import InlineNotes from "./InlineNotes";
+import { useNotes } from "../hooks/useNotes";
 import {
   WINDOW_DAYS,
   renderLogLines,
   truncateLogToTestScope,
   extractFatalPreview,
-  dateOnly,
+  formatDateTime,
+  formatDuration,
   severityColor,
 } from "./failureHelpers";
 import { getExpandedLog } from "../services/apiService";
@@ -35,6 +37,7 @@ export function latestFailedToGroupedItem(item: LatestFailedTestItem): RecentFai
       buildNumber: item.buildNumber,
       logLink: item.logLink,
       screenshotLink: item.screenshotLink,
+      duration: item.duration ?? null,
     },
   };
 }
@@ -47,9 +50,11 @@ interface ReasonBlockProps {
   testName: string;
   onExpandLog: (lines: string[], label: string) => void;
   extraActions?: React.ReactNode;
+  /** Primary reason hides its notes here because they render under the test name. */
+  hideNotes?: boolean;
 }
 
-const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onExpandLog, extraActions }) => {
+const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onExpandLog, extraActions, hideNotes }) => {
   const previewLines = extractFatalPreview(reason.text ?? "");
   const [logLoading, setLogLoading] = useState(false);
 
@@ -110,6 +115,13 @@ const ReasonBlock: React.FC<ReasonBlockProps> = ({ reason, label, testName, onEx
         )}
         {extraActions}
       </Box>
+
+      {/* Notes for THIS specific reason — its own block directly below the reason. */}
+      {!hideNotes && (
+        <div style={{ display: "block", marginTop: "8px", textAlign: "left" }}>
+          <InlineNotes testName={testName} failureReason={reason.text ?? "General"} />
+        </div>
+      )}
     </Box>
   );
 };
@@ -124,14 +136,25 @@ interface FailureCardProps {
   onOpenHistory: () => void;
   testRailUrl?: string | null;
   areaName?: string;
+  /** Reason this card is grouped under (By Reason tab) — surfaces cascaded global notes. */
+  reasonContext?: string;
 }
 
-const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, areaName }) => {
+const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, reasonContext }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = item.reasons[0] ?? null;
   const extra = item.reasons.slice(1, 3);
   const screenshotSrc = item.reasons[0]?.screenshotLink ?? item.lastFailure.screenshotLink ?? null;
   const color = severityColor(item.failCount);
+
+  // DEBUG: surface the exact reason strings so we can see why cross-tab matching fails.
+  const { notes } = useNotes();
+  console.log("DEBUG REASON MATCH:", {
+    testName: item.testName,
+    testReason: item.reasons.map((r) => r.text),
+    reasonContext,
+    globalNotes: notes.filter((n) => n.testName === null).map((n) => ({ failureReason: n.failureReason, noteContent: n.noteContent })),
+  });
 
   // History + TestRail, rendered alongside Expand Log / Full Log in a single row.
   const actionButtons = (
@@ -202,7 +225,6 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
           <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, fontWeight: 600, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all", lineHeight: 1.5 }}>
             {item.testName}
           </Typography>
-          <TestNoteButton areaName={areaName} testName={item.testName} />
           {item.lastFailure.server && (
             <Chip label={`🖥️ ${item.lastFailure.server}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "text.secondary", borderColor: "divider", flexShrink: 0 }} />
           )}
@@ -214,8 +236,20 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
           </Box>
         </Box>
 
-        {/* Local note */}
-        <TestNoteDisplay areaName={areaName} testName={item.testName} />
+        {/* Add Note for the main test — its own block directly below the title. */}
+        {reasonContext && !item.reasons.some((r) => (r.text ?? "General") === reasonContext) ? (
+          <div style={{ display: "block", marginTop: "8px", textAlign: "left" }}>
+            <InlineNotes testName={item.testName} failureReason={reasonContext} />
+          </div>
+        ) : item.reasons.length === 0 ? (
+          <div style={{ display: "block", marginTop: "8px", textAlign: "left" }}>
+            <InlineNotes testName={item.testName} failureReason="General" />
+          </div>
+        ) : (
+          <div style={{ display: "block", marginTop: "8px", textAlign: "left" }}>
+            <InlineNotes testName={item.testName} failureReason={item.reasons[0]?.text ?? "General"} />
+          </div>
+        )}
 
         {/* Primary reason — its action row also hosts History + TestRail so all
             buttons (Expand Log, Full Log, History, TR) sit side by side. */}
@@ -227,13 +261,23 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
               </Typography>
               {primary.lastDate && (
                 <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", bgcolor: "action.hover", borderRadius: "4px", px: 0.875, py: "1px", border: 1, borderColor: "divider" }}>
-                  📅 {dateOnly(primary.lastDate)}
+                  📅 {formatDateTime(primary.lastDate)}
                 </Typography>
               )}
+              {(() => {
+                const dur = formatDuration({ ...(item as any), ...(item.lastFailure as any), ...(primary as any) });
+                if (!dur) return null;
+                // Match the Date element styling exactly (same caption + sx).
+                return (
+                  <Typography variant="caption" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontWeight: 600, color: "text.secondary", bgcolor: "action.hover", borderRadius: "4px", px: 0.875, py: "1px", border: 1, borderColor: "divider" }}>
+                    <AccessTimeIcon sx={{ fontSize: 13 }} /> Runtime: {dur}
+                  </Typography>
+                );
+              })()}
             </Box>
             <ReasonBlock reason={primary} label="Primary Reason" testName={item.testName}
               onExpandLog={(lines, label) => onExpandLog(lines, item.testName, label)}
-              extraActions={actionButtons} />
+              extraActions={actionButtons} hideNotes />
           </Box>
         ) : (
           <Box sx={{ display: "flex", gap: 0.875, flexWrap: "wrap", pt: 0.5 }}>
@@ -265,7 +309,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
                       </Typography>
                       {reason.lastDate && (
                         <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", bgcolor: "action.hover", borderRadius: "4px", px: 0.875, py: "1px", border: 1, borderColor: "divider" }}>
-                          📅 {dateOnly(reason.lastDate)}
+                          📅 {formatDateTime(reason.lastDate)}
                         </Typography>
                       )}
                     </Box>

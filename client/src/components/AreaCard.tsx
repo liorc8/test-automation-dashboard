@@ -50,9 +50,17 @@ const AreaCard: React.FC<AreaCardProps> = ({
 
   const trendData = (trendDataProp && trendDataProp.length > 0) ? trendDataProp : fetchedTrend;
 
+  // Show the EXACT pass rate of the latest day — matching the right-most plotted
+  // point in the trend chart (same ascending-date sort + rounding it uses).
+  const sortedTrend = [...trendData].sort((a, b) => a.date.localeCompare(b.date));
+  const latestDay = [...sortedTrend].reverse().find((p) => p.total > 0) ?? null;
+  const displayRate = latestDay
+    ? Math.round((latestDay.passed / latestDay.total) * 100)
+    : passRate;
+
   let statusColor = '#d32f2f';
-  if (passRate > 80) statusColor = '#2e7d32';
-  else if (passRate > 50) statusColor = '#ed6c02';
+  if (displayRate > 80) statusColor = '#2e7d32';
+  else if (displayRate > 50) statusColor = '#ed6c02';
 
   return (
     <Card
@@ -84,7 +92,7 @@ const AreaCard: React.FC<AreaCardProps> = ({
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h3" sx={{ color: statusColor, fontWeight: 'bold' }}>
-            {passRate}%
+            {displayRate}%
           </Typography>
 
           <Box textAlign="right">

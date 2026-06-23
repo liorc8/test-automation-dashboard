@@ -47,6 +47,10 @@ The frontend (`client/src/services/apiService.ts`) calls the API via the relativ
 | GET | `/api/alma-oops` | Legacy "Alma oops" failures (FATAL + "Message appear") |
 | GET | `/api/logs/expand` | Parsed/expanded Jenkins log snippet |
 | GET | `/api/test-results` | Test name search (and raw rows when no query) |
+| GET | `/api/notes` | List all failure notes |
+| POST | `/api/notes` | Create a failure note (test-scoped or global) |
+| DELETE | `/api/notes/{id}` | Delete a failure note by id |
+| GET | `/api/notes/migrate-db` | Temporary internal DB-migration utility |
 
 ---
 
@@ -612,6 +616,120 @@ Searches test names (when `q` is provided) or returns raw rows.
 ```
 
 **Response — 200 OK (no `q`)** — up to 50 raw `QA_AUTOMATION.TESTRESULTS` rows (Oracle column shape).
+
+---
+
+## Failure Notes
+
+Free-text notes attached to failures, backed by the `FAILURE_NOTES` table. A note is
+either **test-scoped** (`testName` set → applies to that one test) or **global**
+(`testName` null → applies to every test failing for the same `failureReason`).
+The frontend merges a test's private notes with matching global notes for display.
+
+### Note shape
+
+```json
+{
+  "noteId": 42,
+  "testName": "SynchAndEdit...",
+  "failureReason": "FATAL element not found",
+  "noteContent": "Flaky on SQA02 — tracked in URM-1234",
+  "createdAt": "2026-06-22T00:00:00.000Z"
+}
+```
+
+- `noteId` (number) — DB identity (`NOTE_ID`).
+- `testName` (string | null) — `null` means a general/global reason note.
+- `failureReason` (string) — the failure reason the note belongs to (`FAILURE_REASON`, NOT NULL, max 1000 chars).
+- `noteContent` (string) — the note text (max 2000 chars).
+- `createdAt` (string | null) — ISO timestamp; `null` on the immediate POST response.
+
+---
+
+### GET `/api/notes`
+
+Returns all failure notes (newest first). The frontend groups/merges them client-side.
+
+**Response — 200 OK** — array of note objects (see **Note shape**).
+
+```json
+[
+  { "noteId": 42, "testName": null, "failureReason": "FATAL element not found", "noteContent": "Infra issue URM-1234", "createdAt": "2026-06-22T00:00:00.000Z" }
+]
+```
+
+---
+
+### POST `/api/notes`
+
+Creates a new note.
+
+**Request body**
+
+```json
+{
+  "testName": "SynchAndEdit...",
+  "failureReason": "FATAL element not found",
+  "content": "Flaky — retried green"
+}
+```
+
+- `testName` (string | null, optional) — empty/missing/whitespace is normalized to `null` (a global reason note).
+- `failureReason` (string, **required**, non-empty).
+- `content` (string, **required**, non-empty).
+
+**Rules**
+
+- Multiple notes are allowed for the same `(testName, failureReason)` pair.
+- **Maximum 5 notes per item.** Before inserting, the backend counts existing notes for that exact `(testName | null, failureReason)`; if the count is already ≥ 5 it rejects with `400 Bad Request` and does not insert.
+- The legacy unique constraint on `(TEST_NAME, FAILURE_REASON)` has been **dropped**; the only write limit is the 5-note cap above.
+
+**Response — 201 Created**
+
+```json
+{
+  "noteId": 43,
+  "testName": "SynchAndEdit...",
+  "failureReason": "FATAL element not found",
+  "noteContent": "Flaky — retried green"
+}
+```
+
+**Errors**
+
+- `400 Bad Request` — `{ "error": "failureReason is required" }`
+- `400 Bad Request` — `{ "error": "content is required" }`
+- `400 Bad Request` — `{ "error": "Maximum of 5 notes per item reached." }` (5-note cap)
+- `500 Internal Server Error` — `{ "error": "Internal Server Error" }`
+
+---
+
+### DELETE `/api/notes/{id}`
+
+Deletes a note by its `NOTE_ID`.
+
+**Path params**
+
+- `id` (number, **required**, positive integer).
+
+**Response — 204 No Content** — deleted (empty body).
+
+**Errors**
+
+- `400 Bad Request` — `{ "error": "id must be a positive integer" }`
+- `404 Not Found` — `{ "error": "Note not found: 999" }`
+- `500 Internal Server Error` — `{ "error": "Internal Server Error" }`
+
+---
+
+### GET `/api/notes/migrate-db`
+
+**Temporary internal utility.** One-off endpoint used to migrate / adjust the
+`FAILURE_NOTES` table schema (e.g. dropping the legacy unique constraint, raising
+column sizes). Not part of the stable public contract — intended for operator use
+during deployment and slated for removal once migration is complete.
+
+**Response — 200 OK** — a plain status payload describing the migration outcome.
 
 ---
 

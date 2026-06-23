@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Box, Typography, Button,
+  Box, Typography, Button, IconButton, Tooltip,
   Collapse, ToggleButtonGroup, ToggleButton, Paper, Skeleton, Alert,
   Accordion, AccordionSummary, AccordionDetails,
 } from "@mui/material";
@@ -10,7 +10,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import SearchInput from "../components/SearchInput";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import SearchWithHistory from "../components/SearchWithHistory";
 import ThemeToggle from "../components/ThemeToggle";
 import { useTestRailIds } from "../hooks/useTestRailIds";
 import FailureCard, { latestFailedToGroupedItem } from "../components/FailureCard";
@@ -133,9 +134,19 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                     }}
                   >
                     <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#ef4444", flexShrink: 0 }} />
-                    <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
+                    <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", minWidth: 0, flexShrink: 1, maxWidth: "55%", wordBreak: "break-all" }}>
                       {test.testName}
                     </Typography>
+                    <Tooltip title="Copy test name">
+                      <IconButton
+                        size="small"
+                        aria-label="Copy test name"
+                        onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(test.testName); }}
+                        sx={{ flexShrink: 0, p: 0.25, ml: 0.25, color: "text.disabled", "&:hover": { color: "text.secondary" } }}
+                      >
+                        <ContentCopyIcon sx={{ fontSize: 14 }} />
+                      </IconButton>
+                    </Tooltip>
                     {/* List view: notes + Add control on the far right of the row. */}
                     {!isOpen && (
                       <Box sx={{ ml: "auto", mr: 1, display: "flex", minWidth: 0, maxWidth: "55%", overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
@@ -443,9 +454,12 @@ const RecentFailuresPage: React.FC = () => {
           <ToggleButton value={3}>By Reason</ToggleButton>
         </ToggleButtonGroup>
 
-        <SearchInput
+        <SearchWithHistory
           value={search}
-          onChange={setSearch}
+          onSearch={setSearch}
+          storageKey="recent-failures-query-text-history"
+          placeholder="Search failures…"
+          saveTypedQueries
           sx={{ width: 280 }}
         />
       </Box>

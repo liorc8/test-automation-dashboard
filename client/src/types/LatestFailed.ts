@@ -7,6 +7,7 @@ export type LatestFailedTestItem = {
   screenshotLink: string | null;
   almaVersion: string | null;
   buildNumber: number | null;
+  duration?: number | null;
 };
 
 export type LatestFailedByServer = {

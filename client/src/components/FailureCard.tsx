@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Box, Typography, Button, Card, CardContent, Chip, Collapse, CircularProgress } from "@mui/material";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import ScreenshotPanel from "./ScreenshotPanel";
@@ -12,7 +13,8 @@ import {
   renderLogLines,
   truncateLogToTestScope,
   extractFatalPreview,
-  dateOnly,
+  formatDateTime,
+  formatDuration,
   severityColor,
 } from "./failureHelpers";
 import { getExpandedLog } from "../services/apiService";
@@ -35,6 +37,7 @@ export function latestFailedToGroupedItem(item: LatestFailedTestItem): RecentFai
       buildNumber: item.buildNumber,
       logLink: item.logLink,
       screenshotLink: item.screenshotLink,
+      duration: item.duration ?? null,
     },
   };
 }
@@ -258,9 +261,19 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
               </Typography>
               {primary.lastDate && (
                 <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", bgcolor: "action.hover", borderRadius: "4px", px: 0.875, py: "1px", border: 1, borderColor: "divider" }}>
-                  📅 {dateOnly(primary.lastDate)}
+                  📅 {formatDateTime(primary.lastDate)}
                 </Typography>
               )}
+              {(() => {
+                const dur = formatDuration({ ...(item as any), ...(item.lastFailure as any), ...(primary as any) });
+                if (!dur) return null;
+                // Match the Date element styling exactly (same caption + sx).
+                return (
+                  <Typography variant="caption" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontWeight: 600, color: "text.secondary", bgcolor: "action.hover", borderRadius: "4px", px: 0.875, py: "1px", border: 1, borderColor: "divider" }}>
+                    <AccessTimeIcon sx={{ fontSize: 13 }} /> Runtime: {dur}
+                  </Typography>
+                );
+              })()}
             </Box>
             <ReasonBlock reason={primary} label="Primary Reason" testName={item.testName}
               onExpandLog={(lines, label) => onExpandLog(lines, item.testName, label)}
@@ -296,7 +309,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
                       </Typography>
                       {reason.lastDate && (
                         <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", bgcolor: "action.hover", borderRadius: "4px", px: 0.875, py: "1px", border: 1, borderColor: "divider" }}>
-                          📅 {dateOnly(reason.lastDate)}
+                          📅 {formatDateTime(reason.lastDate)}
                         </Typography>
                       )}
                     </Box>

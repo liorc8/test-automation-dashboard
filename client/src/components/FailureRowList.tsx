@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Box, Typography, Button, Paper, Collapse } from "@mui/material";
+import { Box, Typography, Button, Paper, Collapse, IconButton, Tooltip } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import FailureCard from "./FailureCard";
 import InlineNotes from "./InlineNotes";
 import type { RecentFailureGroupedItem } from "../types/RecentFailuresGrouped";
@@ -48,9 +49,19 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
               }}
             >
               <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#ef4444", flexShrink: 0 }} />
-              <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", flex: 1, minWidth: 0, wordBreak: "break-all" }}>
+              <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", minWidth: 0, flexShrink: 1, maxWidth: "55%", wordBreak: "break-all" }}>
                 {item.testName}
               </Typography>
+              <Tooltip title="Copy test name">
+                <IconButton
+                  size="small"
+                  aria-label="Copy test name"
+                  onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(item.testName); }}
+                  sx={{ flexShrink: 0, p: 0.25, ml: 0.25, color: "text.disabled", "&:hover": { color: "text.secondary" } }}
+                >
+                  <ContentCopyIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
               {/* List view: notes + Add control on the far right of the row. */}
               {!isOpen && (
                 <Box sx={{ ml: "auto", mr: 1, display: "flex", minWidth: 0, maxWidth: "55%", overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>

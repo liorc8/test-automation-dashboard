@@ -3,12 +3,16 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Box, Typography, Button, Paper, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress, Alert } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { getTestHistory } from "../services/apiService";
 import { useTestRailIds } from "../hooks/useTestRailIds";
 import ThemeToggle from "../components/ThemeToggle";
 import type { TestHistoryResponse, TestHistoryRow } from "../types/TestHistory";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { formatDateOnly, extractFatalLine } from "../components/failureHelpers";
+import FailureCard, { testHistoryRowToGroupedItem } from "../components/FailureCard";
+import ImageModal from "../components/ImageModal";
+import LogModal from "../components/LogModal";
 
 const TestHistoryPage: React.FC = () => {
     const { areaName, testName } = useParams<{ areaName: string; testName: string }>();
@@ -24,6 +28,12 @@ const TestHistoryPage: React.FC = () => {
     const { urlFor: testRailUrlFor } = useTestRailIds(areaName, env);
     const testRailUrl = testName ? testRailUrlFor(testName) : null;
 
+    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+    const [imageSrc, setImageSrc] = useState<string | null>(null);
+    const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
+
+    const selectedRow = selectedIndex !== null && data ? data.rows[selectedIndex] : null;
+
     useEffect(() => {
         if (!areaName || !testName) return;
         setLoading(true);
@@ -33,6 +43,12 @@ const TestHistoryPage: React.FC = () => {
             .catch((e) => setError(e instanceof Error ? e.message : String(e)))
             .finally(() => setLoading(false));
     }, [areaName, testName, env, daysBack]);
+
+    useEffect(() => {
+    if (!data) return;
+    const firstFailIdx = data.rows.findIndex((r) => !r.passed);
+    setSelectedIndex(firstFailIdx >= 0 ? firstFailIdx : null);
+    }, [data]);
 
     // Build chart points: daily pass rate over daysBack window
     const chartPoints = React.useMemo(() => {
@@ -125,15 +141,31 @@ const TestHistoryPage: React.FC = () => {
                                 </ResponsiveContainer>
                             </Box>
                         </Paper>
-
+                        <Paper sx={{ p: 2, mb: 3 }} variant="outlined">
+                            <Typography sx={{ fontWeight: 700, mb: 1.5 }}>Failure Details</Typography>
+                            {selectedRow ? (
+                                <FailureCard
+                                    item={testHistoryRowToGroupedItem(selectedRow, testName ?? "")}
+                                    index={0}
+                                    onImageClick={setImageSrc}
+                                    onExpandLog={(lines, tName, label) => setLogModal({ lines, testName: tName, label })}
+                                    testRailUrl={testRailUrl}
+                                    areaName={areaName}
+                                />
+                            ) : (
+                                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                                    No failures in this window — nothing to show.
+                                </Typography>
+                            )}
+                        </Paper>
                         {(() => {
-                            const grouped = new Map<string, TestHistoryRow[]>();
-                            for (const row of data.rows) {
+                            const grouped = new Map<string, { row: TestHistoryRow; idx: number }[]>();
+                            data.rows.forEach((row, idx) => {
                                 const server = row.server ?? "Unknown";
                                 if (!grouped.has(server)) grouped.set(server, []);
-                                grouped.get(server)!.push(row);
-                            }
-                            return Array.from(grouped.entries()).map(([server, rows]) => (
+                                grouped.get(server)!.push({ row, idx });
+                            });
+                            return Array.from(grouped.entries()).map(([server, entries]) => (
                                 <Box key={server} sx={{ mb: 3 }}>
                                     <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary", mb: 1.5, px: 1 }}>
                                         🖥️ {server}
@@ -149,22 +181,51 @@ const TestHistoryPage: React.FC = () => {
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
-                                                {rows.map((r: TestHistoryRow, i: number) => (
-                                                    <TableRow key={i} sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                                                        <TableCell sx={{ fontSize: 13, whiteSpace: "nowrap" }}>
-                                                            {formatDateOnly(r.testedOn) ?? "-"}
-                                                        </TableCell>
-                                                        <TableCell align="center">{r.passed ? <Box sx={{ color: "#2e7d32", fontWeight: 700 }}>PASS</Box> : <Box sx={{ color: "#c62828", fontWeight: 700 }}>FAIL</Box>}</TableCell>
-                                                        <TableCell sx={{ fontSize: 12 }}>{r.almaVersion ?? "-"}</TableCell>
-                                                        <TableCell sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, whiteSpace: "pre-wrap", wordBreak: "break-word", maxWidth: 600 }}>{r.failureText ? extractFatalLine(r.failureText) : "-"}</TableCell>
-                                                    </TableRow>
-                                                ))}
+                                                {entries.map(({ row: r, idx }) => {
+                                                    const isSelected = selectedIndex === idx;
+                                                    const clickable = !r.passed;
+                                                    return (
+                                                        <TableRow
+                                                            key={idx}
+                                                            onClick={() => { if (clickable) setSelectedIndex(idx); }}
+                                                            sx={{
+                                                                '&:last-child td': { borderBottom: 0 },
+                                                                cursor: clickable ? "pointer" : "default",
+                                                                borderLeft: isSelected ? "3px solid #c62828" : "3px solid transparent",
+                                                                bgcolor: isSelected ? "rgba(198, 40, 40, 0.08)" : "transparent",
+                                                                transition: "background-color 0.15s ease, border-color 0.15s ease",
+                                                                "&:hover": clickable ? { bgcolor: isSelected ? "rgba(198, 40, 40, 0.08)" : "action.hover" } : undefined,
+                                                            }}
+                                                        >
+                                                            <TableCell sx={{ fontSize: 13, whiteSpace: "nowrap" }}>
+                                                                {formatDateOnly(r.testedOn) ?? "-"}
+                                                            </TableCell>
+                                                            <TableCell align="center">
+                                                                {r.passed ? (
+                                                                    <Box sx={{ color: "#2e7d32", fontWeight: 700 }}>PASS</Box>
+                                                                ) : (
+                                                                    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, color: "#c62828", fontWeight: isSelected ? 800 : 700, }}>
+                                                                        FAIL
+                                                                        <VisibilityIcon sx={{ fontSize: 15, opacity: isSelected ? 1 : 0.45 }} />
+                                                                    </Box>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell sx={{ fontSize: 12 }}>{r.almaVersion ?? "-"}</TableCell>
+                                                            <TableCell sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, whiteSpace: "pre-wrap", wordBreak: "break-word", maxWidth: 600 }}>{r.failureText ? extractFatalLine(r.failureText) : "-"}</TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
                                             </TableBody>
                                         </Table>
                                     </Paper>
                                 </Box>
                             ));
                         })()}
+                        {imageSrc && <ImageModal src={imageSrc} onClose={() => setImageSrc(null)} />}
+                        {logModal && (
+                            <LogModal lines={logModal.lines} testName={logModal.testName} reasonLabel={logModal.label}
+                                onClose={() => setLogModal(null)} />
+                        )}
                     </>
                 )}
             </Box>

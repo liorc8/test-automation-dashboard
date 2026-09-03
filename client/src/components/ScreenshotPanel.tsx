@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import BrokenImageIcon from "@mui/icons-material/BrokenImage";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
@@ -12,6 +12,10 @@ const ScreenshotPanel: React.FC<ScreenshotPanelProps> = ({ src, onClick }) => {
   const [errored, setErrored] = useState(false);
   const [hovered, setHovered] = useState(false);
   const missing = !src || errored;
+
+  useEffect(() => {
+    setErrored(false);
+  }, [src]);
 
   if (missing) {
     return (

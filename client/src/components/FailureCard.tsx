@@ -20,6 +20,7 @@ import {
 import { getExpandedLog } from "../services/apiService";
 import type { RecentFailureGroupedItem, ReasonEntry } from "../types/RecentFailuresGrouped";
 import type { LatestFailedTestItem } from "../types/LatestFailed";
+import type { TestHistoryRow } from "../types/TestHistory";
 
 // ─── Adapter: LatestFailedTestItem → RecentFailureGroupedItem ─────────────────
 
@@ -38,6 +39,25 @@ export function latestFailedToGroupedItem(item: LatestFailedTestItem): RecentFai
       logLink: item.logLink,
       screenshotLink: item.screenshotLink,
       duration: item.duration ?? null,
+    },
+  };
+}
+
+export function testHistoryRowToGroupedItem(row: TestHistoryRow, testName: string): RecentFailureGroupedItem {
+  return {
+    testName,
+    failCount: 1,
+    lastFailedOn: row.testedOn,
+    reasons: row.failureText
+      ? [{ text: row.failureText, lastDate: row.testedOn, screenshotLink: row.screenshotLink, logLink: row.logLink }]
+      : [],
+    lastFailure: {
+      server: row.server,
+      almaVersion: row.almaVersion,
+      buildNumber: row.buildNumber,
+      logLink: row.logLink,
+      screenshotLink: row.screenshotLink,
+      duration: null,
     },
   };
 }
@@ -133,7 +153,7 @@ interface FailureCardProps {
   index: number;
   onImageClick: (src: string) => void;
   onExpandLog: (lines: string[], testName: string, label: string) => void;
-  onOpenHistory: () => void;
+  onOpenHistory?: () => void;
   testRailUrl?: string | null;
   areaName?: string;
   /** Reason this card is grouped under (By Reason tab) — surfaces cascaded global notes. */
@@ -159,6 +179,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
   // History + TestRail, rendered alongside Expand Log / Full Log in a single row.
   const actionButtons = (
     <>
+    {onOpenHistory && (
       <Button
         size="small"
         variant="outlined"
@@ -172,7 +193,8 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
       >
         History
       </Button>
-      {testRailUrl && (
+    )}
+    {testRailUrl && (
         <Button
           size="small"
           variant="outlined"

@@ -25,8 +25,9 @@ const TestHistoryPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    const { urlFor: testRailUrlFor } = useTestRailIds(areaName, env);
+    const { urlFor: testRailUrlFor, idFor: testRailIdFor } = useTestRailIds(areaName, env);
     const testRailUrl = testName ? testRailUrlFor(testName) : null;
+
 
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -151,6 +152,8 @@ const TestHistoryPage: React.FC = () => {
                                     onExpandLog={(lines, tName, label) => setLogModal({ lines, testName: tName, label })}
                                     testRailUrl={testRailUrl}
                                     areaName={areaName}
+                                    testRailId={testName ? testRailIdFor(testName) : null}
+                                    targetUnixTime={selectedRow.endingTimeUnix != null ? Math.round(selectedRow.endingTimeUnix / 1000) : null}
                                 />
                             ) : (
                                 <Typography variant="body2" sx={{ color: "text.secondary" }}>

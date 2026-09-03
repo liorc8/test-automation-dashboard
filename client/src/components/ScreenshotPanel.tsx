@@ -6,16 +6,27 @@ import ZoomInIcon from "@mui/icons-material/ZoomIn";
 interface ScreenshotPanelProps {
   src: string | null;
   onClick: (src: string) => void;
+  testRailId?: string | null;
+  targetUnixTime?: number | null;
 }
 
-const ScreenshotPanel: React.FC<ScreenshotPanelProps> = ({ src, onClick }) => {
+const ScreenshotPanel: React.FC<ScreenshotPanelProps> = ({ src, onClick, testRailId, targetUnixTime }) => {
   const [errored, setErrored] = useState(false);
+  const [fallbackErrored, setFallbackErrored] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const missing = !src || errored;
+
 
   useEffect(() => {
     setErrored(false);
-  }, [src]);
+    setFallbackErrored(false);
+  }, [src, testRailId, targetUnixTime]);
+
+  const canFallback = !!testRailId && targetUnixTime != null;
+  const useFallback = (!src || errored) && canFallback && !fallbackErrored;
+  const effectiveSrc = useFallback
+    ? `/api/testrail/screenshot/${testRailId}/${targetUnixTime}`
+    : src;
+  const missing = !effectiveSrc || (errored && !useFallback) || (useFallback && fallbackErrored);
 
   if (missing) {
     return (
@@ -30,7 +41,7 @@ const ScreenshotPanel: React.FC<ScreenshotPanelProps> = ({ src, onClick }) => {
           Screenshot not captured
         </Typography>
         <Typography variant="caption" sx={{ color: "#475569", textAlign: "center", maxWidth: 200, lineHeight: 1.5 }}>
-          Failed to capture during test execution
+          {canFallback ? "Not found in TestRail either" : "Failed to capture during test execution"}
         </Typography>
       </Box>
     );
@@ -39,14 +50,15 @@ const ScreenshotPanel: React.FC<ScreenshotPanelProps> = ({ src, onClick }) => {
   return (
     <Box
       sx={{ width: "100%", height: "100%", cursor: "zoom-in", position: "relative" }}
-      onClick={() => onClick(src!)}
+      onClick={() => onClick(effectiveSrc!)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <img
-        src={src!}
+        key={effectiveSrc}
+        src={effectiveSrc!}
         alt="failure screenshot"
-        onError={() => setErrored(true)}
+        onError={() => { if (useFallback) setFallbackErrored(true); else setErrored(true); }}
         style={{
           width: "100%", height: "100%",
           objectFit: "contain", objectPosition: "center",

@@ -158,9 +158,11 @@ interface FailureCardProps {
   areaName?: string;
   /** Reason this card is grouped under (By Reason tab) — surfaces cascaded global notes. */
   reasonContext?: string;
+  testRailId?: string | null;
+  targetUnixTime?: number | null;
 }
 
-const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, reasonContext }) => {
+const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, reasonContext, testRailId, targetUnixTime }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = item.reasons[0] ?? null;
   const extra = item.reasons.slice(1, 3);
@@ -230,7 +232,12 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
     >
       {/* Screenshot panel */}
       <Box sx={{ flex: "0 0 38%", minWidth: 380, alignSelf: "stretch", bgcolor: "background.paper", borderRadius: "10px 0 0 10px", overflow: "hidden", position: "relative" }}>
-        <ScreenshotPanel src={screenshotSrc} onClick={onImageClick} />
+        <ScreenshotPanel
+          src={screenshotSrc}
+          onClick={onImageClick}
+          testRailId={testRailId}
+          targetUnixTime={targetUnixTime}
+        />
       </Box>
 
       {/* Data panel */}

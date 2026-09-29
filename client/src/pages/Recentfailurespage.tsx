@@ -627,6 +627,7 @@ const { urlFor: testRailUrlFor, idFor: testRailIdFor } = useTestRailIds(areaName
               <ByReasonView
                 reasons={reasonData.reasons}
                 areaName={areaName}
+                search={search}
                 onImageClick={setImageSrc}
                 onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
                 onOpenHistory={openTestHistory}

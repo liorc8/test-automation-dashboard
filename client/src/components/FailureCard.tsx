@@ -20,13 +20,14 @@ import {
 import { getExpandedLog } from "../services/apiService";
 import type { RecentFailureGroupedItem, ReasonEntry } from "../types/RecentFailuresGrouped";
 import type { LatestFailedTestItem } from "../types/LatestFailed";
+import type { TestHistoryRow } from "../types/TestHistory";
 
 // ─── Adapter: LatestFailedTestItem → RecentFailureGroupedItem ─────────────────
 
 export function latestFailedToGroupedItem(item: LatestFailedTestItem): RecentFailureGroupedItem {
   return {
     testName: item.testName,
-    failCount: 1,
+    failCount: item.failCount,
     lastFailedOn: item.testedOn,
     reasons: item.failureText
       ? [{ text: item.failureText, lastDate: item.testedOn, screenshotLink: item.screenshotLink, logLink: item.logLink }]
@@ -38,6 +39,30 @@ export function latestFailedToGroupedItem(item: LatestFailedTestItem): RecentFai
       logLink: item.logLink,
       screenshotLink: item.screenshotLink,
       duration: item.duration ?? null,
+      endingTimeUnix: item.endingTimeUnix ?? null,
+    },
+  };
+}
+
+export function testHistoryRowToGroupedItem(
+  row: TestHistoryRow,
+  testName: string,
+  failCount: number = 1
+): RecentFailureGroupedItem {
+  return {
+    testName,
+    failCount,
+    lastFailedOn: row.testedOn,
+    reasons: row.failureText
+      ? [{ text: row.failureText, lastDate: row.testedOn, screenshotLink: row.screenshotLink, logLink: row.logLink }]
+      : [],
+    lastFailure: {
+      server: row.server,
+      almaVersion: row.almaVersion,
+      buildNumber: row.buildNumber,
+      logLink: row.logLink,
+      screenshotLink: row.screenshotLink,
+      duration: null,
     },
   };
 }
@@ -133,14 +158,17 @@ interface FailureCardProps {
   index: number;
   onImageClick: (src: string) => void;
   onExpandLog: (lines: string[], testName: string, label: string) => void;
-  onOpenHistory: () => void;
+  onOpenHistory?: () => void;
   testRailUrl?: string | null;
   areaName?: string;
   /** Reason this card is grouped under (By Reason tab) — surfaces cascaded global notes. */
   reasonContext?: string;
+  testRailId?: string | null;
+  targetUnixTime?: number | null;
+  windowDaysOverride?: number;
 }
 
-const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, reasonContext }) => {
+const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, reasonContext, testRailId, targetUnixTime, windowDaysOverride }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = item.reasons[0] ?? null;
   const extra = item.reasons.slice(1, 3);
@@ -159,6 +187,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
   // History + TestRail, rendered alongside Expand Log / Full Log in a single row.
   const actionButtons = (
     <>
+    {onOpenHistory && (
       <Button
         size="small"
         variant="outlined"
@@ -172,7 +201,8 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
       >
         History
       </Button>
-      {testRailUrl && (
+    )}
+    {testRailUrl && (
         <Button
           size="small"
           variant="outlined"
@@ -208,7 +238,12 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
     >
       {/* Screenshot panel */}
       <Box sx={{ flex: "0 0 38%", minWidth: 380, alignSelf: "stretch", bgcolor: "background.paper", borderRadius: "10px 0 0 10px", overflow: "hidden", position: "relative" }}>
-        <ScreenshotPanel src={screenshotSrc} onClick={onImageClick} />
+        <ScreenshotPanel
+          src={screenshotSrc}
+          onClick={onImageClick}
+          testRailId={testRailId}
+          targetUnixTime={targetUnixTime}
+        />
       </Box>
 
       {/* Data panel */}
@@ -232,7 +267,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
             <Chip label={`📦 ${item.lastFailure.almaVersion}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "text.secondary", borderColor: "divider", flexShrink: 0 }} />
           )}
           <Box component="span" sx={{ bgcolor: color, color: "#fff", borderRadius: 20, px: 1.5, py: "3px", fontSize: 12, fontWeight: 700, flexShrink: 0, whiteSpace: "nowrap", lineHeight: 1.6 }}>
-            Failed {item.failCount} {item.failCount === 1 ? "time" : "times"} in {WINDOW_DAYS} days
+            Failed {item.failCount} {item.failCount === 1 ? "time" : "times"} in {windowDaysOverride ?? WINDOW_DAYS} days
           </Box>
         </Box>
 

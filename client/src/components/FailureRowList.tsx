@@ -4,8 +4,10 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CheckIcon from "@mui/icons-material/Check";
 import FailureCard from "./FailureCard";
 import InlineNotes from "./InlineNotes";
+import { copyTextToClipboard } from "../utils/clipboard";
 import type { RecentFailureGroupedItem } from "../types/RecentFailuresGrouped";
 
 interface FailureRowListProps {
@@ -24,6 +26,7 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
   items, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, areaName, reasonContext,
 }) => {
   const [openTestName, setOpenTestName] = useState<string | null>(null);
+  const [copiedTestName, setCopiedTestName] = useState<string | null>(null);
 
   return (
     <Paper variant="outlined" sx={{ borderTop: "none", borderRadius: "0 0 8px 8px", overflow: "hidden" }}>
@@ -52,14 +55,44 @@ const FailureRowList: React.FC<FailureRowListProps> = ({
               <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", minWidth: 0, flexShrink: 1, maxWidth: "55%", wordBreak: "break-all" }}>
                 {item.testName}
               </Typography>
-              <Tooltip title="Copy test name">
+              <Tooltip title={copiedTestName === item.testName ? "Copied!" : "Copy test name"}>
                 <IconButton
                   size="small"
                   aria-label="Copy test name"
-                  onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(item.testName); }}
-                  sx={{ flexShrink: 0, p: 0.25, ml: 0.25, color: "text.disabled", "&:hover": { color: "text.secondary" } }}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const success = await copyTextToClipboard(item.testName);
+                    if (success) {
+                      setCopiedTestName(item.testName);
+                      setTimeout(() => {
+                        setCopiedTestName((prev) => (prev === item.testName ? null : prev));
+                      }, 1500);
+                    }
+                  }}
+                  sx={{
+                    flexShrink: 0, p: 0.25, ml: 0.25,
+                    color: copiedTestName === item.testName ? "#22c55e" : "text.disabled",
+                    "&:hover": { color: copiedTestName === item.testName ? "#22c55e" : "text.secondary" },
+                  }}
                 >
-                  <ContentCopyIcon sx={{ fontSize: 14 }} />
+                  <Box sx={{ position: "relative", width: 14, height: 14 }}>
+                    <ContentCopyIcon
+                      sx={{
+                        fontSize: 14, position: "absolute", inset: 0,
+                        opacity: copiedTestName === item.testName ? 0 : 1,
+                        transform: copiedTestName === item.testName ? "scale(0.5)" : "scale(1)",
+                        transition: "opacity 0.2s ease, transform 0.2s ease",
+                      }}
+                    />
+                    <CheckIcon
+                      sx={{
+                        fontSize: 14, position: "absolute", inset: 0,
+                        opacity: copiedTestName === item.testName ? 1 : 0,
+                        transform: copiedTestName === item.testName ? "scale(1)" : "scale(0.5)",
+                        transition: "opacity 0.2s ease, transform 0.2s ease",
+                      }}
+                    />
+                  </Box>
                 </IconButton>
               </Tooltip>
               {/* List view: notes + Add control on the far right of the row. */}

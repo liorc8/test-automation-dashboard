@@ -14,7 +14,8 @@ const ImageModal: React.FC<{ src: string; onClose: () => void }> = ({ src, onClo
       <img
         src={src}
         alt="screenshot"
-        style={{ maxWidth: "92vw", maxHeight: "92vh", borderRadius: 8, boxShadow: "0 28px 64px rgba(0,0,0,0.7)", display: "block" }}
+        onClick={onClose}
+        style={{ maxWidth: "92vw", maxHeight: "92vh", borderRadius: 8, boxShadow: "0 28px 64px rgba(0,0,0,0.7)", display: "block", cursor: "zoom-out" }}
       />
       <IconButton
         onClick={onClose}

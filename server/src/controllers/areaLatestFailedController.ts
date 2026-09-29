@@ -15,7 +15,11 @@ export const getAreaLatestFailedHandler = async (req: Request, res: Response) =>
     const env: EnvFilter =
       envRaw === "release" ? "release" : envRaw === "sandbox" ? "sandbox" : "qa";
 
-    const data = await getAreaLatestFailed(areaName, env);
+    const daysBackRaw = req.query.daysBack as string | undefined;
+    const parsed = daysBackRaw ? parseInt(daysBackRaw, 10) : NaN;
+    const daysBack = Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
+
+    const data = await getAreaLatestFailed(areaName, env, daysBack);
     return res.json(data);
   } catch (error) {
     console.error("Error fetching latest failed tests:", error);

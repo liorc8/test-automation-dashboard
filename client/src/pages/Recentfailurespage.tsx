@@ -11,6 +11,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CheckIcon from "@mui/icons-material/Check";
 import SearchWithHistory from "../components/SearchWithHistory";
 import ThemeToggle from "../components/ThemeToggle";
 import { useTestRailIds } from "../hooks/useTestRailIds";
@@ -22,6 +23,7 @@ import ImageModal from "../components/ImageModal";
 import LogModal from "../components/LogModal";
 import { WINDOW_DAYS } from "../components/failureHelpers";
 import { getAreaRecentFailuresGrouped, getAreaLatestFailedTests, getAreaFailuresByReason } from "../services/apiService";
+import { copyTextToClipboard } from "../utils/clipboard";
 import type { EnvFilter } from "../services/apiService";
 import type { AreaRecentFailuresGroupedResponse, RecentFailureGroupedItem } from "../types/RecentFailuresGrouped";
 import type { LatestFailedTestsResponse } from "../types/LatestFailed";
@@ -60,11 +62,13 @@ interface LatestFailedViewProps {
   onExpandLog: (lines: string[], testName: string, label: string) => void;
   onOpenHistory: (testName: string) => void;
   testRailUrlFor: (testName: string) => string | null;
+  testRailIdFor: (testName: string) => string | null;
   areaName?: string;
 }
 
-const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, areaName }) => {
+const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, testRailIdFor, areaName }) => {
   const [openTestName, setOpenTestName] = useState<string | null>(null);
+  const [copiedTestName, setCopiedTestName] = useState<string | null>(null);
 
   const handleRowClick = (testName: string) => {
     setOpenTestName(prev => (prev === testName ? null : testName));
@@ -137,14 +141,44 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                     <Typography sx={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: "text.primary", minWidth: 0, flexShrink: 1, maxWidth: "55%", wordBreak: "break-all" }}>
                       {test.testName}
                     </Typography>
-                    <Tooltip title="Copy test name">
+                    <Tooltip title={copiedTestName === test.testName ? "Copied!" : "Copy test name"}>
                       <IconButton
                         size="small"
                         aria-label="Copy test name"
-                        onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(test.testName); }}
-                        sx={{ flexShrink: 0, p: 0.25, ml: 0.25, color: "text.disabled", "&:hover": { color: "text.secondary" } }}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const success = await copyTextToClipboard(test.testName);
+                          if (success) {
+                            setCopiedTestName(test.testName);
+                            setTimeout(() => {
+                              setCopiedTestName((prev) => (prev === test.testName ? null : prev));
+                            }, 1500);
+                          }
+                        }}
+                        sx={{
+                          flexShrink: 0, p: 0.25, ml: 0.25,
+                          color: copiedTestName === test.testName ? "#22c55e" : "text.disabled",
+                          "&:hover": { color: copiedTestName === test.testName ? "#22c55e" : "text.secondary" },
+                        }}
                       >
-                        <ContentCopyIcon sx={{ fontSize: 14 }} />
+                        <Box sx={{ position: "relative", width: 14, height: 14 }}>
+                          <ContentCopyIcon
+                            sx={{
+                              fontSize: 14, position: "absolute", inset: 0,
+                              opacity: copiedTestName === test.testName ? 0 : 1,
+                              transform: copiedTestName === test.testName ? "scale(0.5)" : "scale(1)",
+                              transition: "opacity 0.2s ease, transform 0.2s ease",
+                            }}
+                          />
+                          <CheckIcon
+                            sx={{
+                              fontSize: 14, position: "absolute", inset: 0,
+                              opacity: copiedTestName === test.testName ? 1 : 0,
+                              transform: copiedTestName === test.testName ? "scale(1)" : "scale(0.5)",
+                              transition: "opacity 0.2s ease, transform 0.2s ease",
+                            }}
+                          />
+                        </Box>
                       </IconButton>
                     </Tooltip>
                     {/* List view: notes + Add control on the far right of the row. */}
@@ -227,6 +261,8 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                         onOpenHistory={() => onOpenHistory(test.testName)}
                         testRailUrl={testRailUrlFor(test.testName)}
                         areaName={areaName}
+                        testRailId={testRailIdFor(test.testName)}
+                        targetUnixTime={test.endingTimeUnix != null ? Math.round(test.endingTimeUnix / 1000) : null}
                       />
                     </Box>
                   </Collapse>
@@ -269,7 +305,7 @@ const RecentFailuresPage: React.FC = () => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
 
-  const { urlFor: testRailUrlFor } = useTestRailIds(areaName, env);
+const { urlFor: testRailUrlFor, idFor: testRailIdFor } = useTestRailIds(areaName, env);
 
   const openTestHistory = (testName: string) => {
     if (!areaName) return;
@@ -319,7 +355,7 @@ const RecentFailuresPage: React.FC = () => {
     if (activeTab !== 1 || latestFetched || !areaName) return;
     setLatestLoading(true);
     setLatestError("");
-    getAreaLatestFailedTests(areaName, env)
+    getAreaLatestFailedTests(areaName, WINDOW_DAYS, env)  
       .then(d => { setLatestData(d); setLatestFetched(true); })
       .catch(e => setLatestError(e instanceof Error ? e.message : "Failed to load latest failed tests"))
       .finally(() => setLatestLoading(false));
@@ -495,6 +531,8 @@ const RecentFailuresPage: React.FC = () => {
                       onOpenHistory={() => openTestHistory(item.testName)}
                       testRailUrl={testRailUrlFor(item.testName)}
                       areaName={areaName}
+                      testRailId={testRailIdFor(item.testName)}
+                      targetUnixTime={item.lastFailure.endingTimeUnix != null ? Math.round(item.lastFailure.endingTimeUnix / 1000) : null}
                     />
                   ))}
                 </Box>
@@ -520,6 +558,7 @@ const RecentFailuresPage: React.FC = () => {
                 onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
                 onOpenHistory={openTestHistory}
                 testRailUrlFor={testRailUrlFor}
+                testRailIdFor={testRailIdFor}
                 areaName={areaName}
               />
             )}
@@ -588,6 +627,7 @@ const RecentFailuresPage: React.FC = () => {
               <ByReasonView
                 reasons={reasonData.reasons}
                 areaName={areaName}
+                search={search}
                 onImageClick={setImageSrc}
                 onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
                 onOpenHistory={openTestHistory}

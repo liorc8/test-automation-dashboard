@@ -38,6 +38,7 @@ function renderView() {
     <ByReasonView
       reasons={reasons}
       areaName="LOD"
+      search=""
       onImageClick={() => {}}
       onExpandLog={() => {}}
       onOpenHistory={() => {}}

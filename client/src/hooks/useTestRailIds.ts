@@ -23,5 +23,9 @@ export function useTestRailIds(areaName: string | undefined, env: EnvFilter) {
     return id && baseUrl ? `${baseUrl}${id}` : null;
   };
 
-  return { urlFor };
+  const idFor = (testName: string): string | null => {
+    return ids[testName.toUpperCase()] ?? null;
+  };
+
+  return { urlFor, idFor };
 }

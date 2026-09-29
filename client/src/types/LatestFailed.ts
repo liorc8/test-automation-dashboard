@@ -8,6 +8,7 @@ export type LatestFailedTestItem = {
   almaVersion: string | null;
   buildNumber: number | null;
   duration?: number | null;
+  endingTimeUnix: number | null;
 };
 
 export type LatestFailedByServer = {

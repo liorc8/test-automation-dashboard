@@ -39,6 +39,7 @@ export function latestFailedToGroupedItem(item: LatestFailedTestItem): RecentFai
       logLink: item.logLink,
       screenshotLink: item.screenshotLink,
       duration: item.duration ?? null,
+      endingTimeUnix: item.endingTimeUnix ?? null,
     },
   };
 }

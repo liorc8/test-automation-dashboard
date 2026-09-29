@@ -62,10 +62,11 @@ interface LatestFailedViewProps {
   onExpandLog: (lines: string[], testName: string, label: string) => void;
   onOpenHistory: (testName: string) => void;
   testRailUrlFor: (testName: string) => string | null;
+  testRailIdFor: (testName: string) => string | null;
   areaName?: string;
 }
 
-const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, areaName }) => {
+const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onImageClick, onExpandLog, onOpenHistory, testRailUrlFor, testRailIdFor, areaName }) => {
   const [openTestName, setOpenTestName] = useState<string | null>(null);
   const [copiedTestName, setCopiedTestName] = useState<string | null>(null);
 
@@ -260,6 +261,8 @@ const LatestFailedView: React.FC<LatestFailedViewProps> = ({ data, search, onIma
                         onOpenHistory={() => onOpenHistory(test.testName)}
                         testRailUrl={testRailUrlFor(test.testName)}
                         areaName={areaName}
+                        testRailId={testRailIdFor(test.testName)}
+                        targetUnixTime={test.endingTimeUnix != null ? Math.round(test.endingTimeUnix / 1000) : null}
                       />
                     </Box>
                   </Collapse>
@@ -302,7 +305,7 @@ const RecentFailuresPage: React.FC = () => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
 
-  const { urlFor: testRailUrlFor } = useTestRailIds(areaName, env);
+const { urlFor: testRailUrlFor, idFor: testRailIdFor } = useTestRailIds(areaName, env);
 
   const openTestHistory = (testName: string) => {
     if (!areaName) return;
@@ -528,6 +531,8 @@ const RecentFailuresPage: React.FC = () => {
                       onOpenHistory={() => openTestHistory(item.testName)}
                       testRailUrl={testRailUrlFor(item.testName)}
                       areaName={areaName}
+                      testRailId={testRailIdFor(item.testName)}
+                      targetUnixTime={item.lastFailure.endingTimeUnix != null ? Math.round(item.lastFailure.endingTimeUnix / 1000) : null}
                     />
                   ))}
                 </Box>
@@ -553,6 +558,7 @@ const RecentFailuresPage: React.FC = () => {
                 onExpandLog={(lines, testName, label) => setLogModal({ lines, testName, label })}
                 onOpenHistory={openTestHistory}
                 testRailUrlFor={testRailUrlFor}
+                testRailIdFor={testRailIdFor}
                 areaName={areaName}
               />
             )}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Box, Typography, Button, Paper, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress, Alert } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -34,6 +34,7 @@ const TestHistoryPage: React.FC = () => {
     const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
 
     const selectedRow = selectedIndex !== null && data ? data.rows[selectedIndex] : null;
+    const cardRef = useRef<HTMLDivElement>(null);
     const totalFailCount = data ? data.rows.filter((r) => !r.passed).length : 0;
 
     useEffect(() => {
@@ -143,7 +144,7 @@ const TestHistoryPage: React.FC = () => {
                                 </ResponsiveContainer>
                             </Box>
                         </Paper>
-                        <Paper sx={{ p: 2, mb: 3 }} variant="outlined">
+                        <Paper ref={cardRef} sx={{ p: 2, mb: 3 }} variant="outlined">
                             <Typography sx={{ fontWeight: 700, mb: 1.5 }}>Failure Details</Typography>
                             {selectedRow ? (
                                 <FailureCard
@@ -192,7 +193,11 @@ const TestHistoryPage: React.FC = () => {
                                                     return (
                                                         <TableRow
                                                             key={idx}
-                                                            onClick={() => { if (clickable) setSelectedIndex(idx); }}
+                                                            onClick={() => {
+                                                                if (!clickable) return;
+                                                                setSelectedIndex(idx);
+                                                                cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                                            }}
                                                             sx={{
                                                                 '&:last-child td': { borderBottom: 0 },
                                                                 cursor: clickable ? "pointer" : "default",

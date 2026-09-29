@@ -355,7 +355,7 @@ const { urlFor: testRailUrlFor, idFor: testRailIdFor } = useTestRailIds(areaName
     if (activeTab !== 1 || latestFetched || !areaName) return;
     setLatestLoading(true);
     setLatestError("");
-    getAreaLatestFailedTests(areaName, env)
+    getAreaLatestFailedTests(areaName, WINDOW_DAYS, env)  
       .then(d => { setLatestData(d); setLatestFetched(true); })
       .catch(e => setLatestError(e instanceof Error ? e.message : "Failed to load latest failed tests"))
       .finally(() => setLatestLoading(false));

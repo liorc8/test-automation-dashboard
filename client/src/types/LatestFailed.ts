@@ -9,6 +9,7 @@ export type LatestFailedTestItem = {
   buildNumber: number | null;
   duration?: number | null;
   endingTimeUnix: number | null;
+  failCount: number;
 };
 
 export type LatestFailedByServer = {

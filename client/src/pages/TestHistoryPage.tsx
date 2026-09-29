@@ -34,6 +34,7 @@ const TestHistoryPage: React.FC = () => {
     const [logModal, setLogModal] = useState<{ lines: string[]; testName: string; label: string } | null>(null);
 
     const selectedRow = selectedIndex !== null && data ? data.rows[selectedIndex] : null;
+    const totalFailCount = data ? data.rows.filter((r) => !r.passed).length : 0;
 
     useEffect(() => {
         if (!areaName || !testName) return;
@@ -146,7 +147,7 @@ const TestHistoryPage: React.FC = () => {
                             <Typography sx={{ fontWeight: 700, mb: 1.5 }}>Failure Details</Typography>
                             {selectedRow ? (
                                 <FailureCard
-                                    item={testHistoryRowToGroupedItem(selectedRow, testName ?? "")}
+                                    item={testHistoryRowToGroupedItem(selectedRow, testName ?? "", totalFailCount)}
                                     index={0}
                                     onImageClick={setImageSrc}
                                     onExpandLog={(lines, tName, label) => setLogModal({ lines, testName: tName, label })}
@@ -154,6 +155,7 @@ const TestHistoryPage: React.FC = () => {
                                     areaName={areaName}
                                     testRailId={testName ? testRailIdFor(testName) : null}
                                     targetUnixTime={selectedRow.endingTimeUnix != null ? Math.round(selectedRow.endingTimeUnix / 1000) : null}
+                                    windowDaysOverride={daysBack}
                                 />
                             ) : (
                                 <Typography variant="body2" sx={{ color: "text.secondary" }}>

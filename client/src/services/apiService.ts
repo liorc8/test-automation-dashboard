@@ -183,9 +183,10 @@ export const getAreaFailuresByReason = async (
 
 export const getAreaLatestFailedTests = async (
   areaName: string,
+  windowDays: number = 10,
   env: EnvFilter = "qa"
 ): Promise<LatestFailedTestsResponse> => {
-  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/latest-failed-tests?env=${env}`;
+  const url = `${API_BASE_URL}/areas/${encodeURIComponent(areaName)}/latest-failed-tests?daysBack=${windowDays}&env=${env}`;
   const response = await fetch(url);
   return handleResponse<LatestFailedTestsResponse>(response);
 };

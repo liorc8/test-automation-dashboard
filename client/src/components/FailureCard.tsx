@@ -27,7 +27,7 @@ import type { TestHistoryRow } from "../types/TestHistory";
 export function latestFailedToGroupedItem(item: LatestFailedTestItem): RecentFailureGroupedItem {
   return {
     testName: item.testName,
-    failCount: 1,
+    failCount: item.failCount,
     lastFailedOn: item.testedOn,
     reasons: item.failureText
       ? [{ text: item.failureText, lastDate: item.testedOn, screenshotLink: item.screenshotLink, logLink: item.logLink }]
@@ -44,10 +44,14 @@ export function latestFailedToGroupedItem(item: LatestFailedTestItem): RecentFai
   };
 }
 
-export function testHistoryRowToGroupedItem(row: TestHistoryRow, testName: string): RecentFailureGroupedItem {
+export function testHistoryRowToGroupedItem(
+  row: TestHistoryRow,
+  testName: string,
+  failCount: number = 1
+): RecentFailureGroupedItem {
   return {
     testName,
-    failCount: 1,
+    failCount,
     lastFailedOn: row.testedOn,
     reasons: row.failureText
       ? [{ text: row.failureText, lastDate: row.testedOn, screenshotLink: row.screenshotLink, logLink: row.logLink }]
@@ -161,9 +165,10 @@ interface FailureCardProps {
   reasonContext?: string;
   testRailId?: string | null;
   targetUnixTime?: number | null;
+  windowDaysOverride?: number;
 }
 
-const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, reasonContext, testRailId, targetUnixTime }) => {
+const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, onExpandLog, onOpenHistory, testRailUrl, reasonContext, testRailId, targetUnixTime, windowDaysOverride }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = item.reasons[0] ?? null;
   const extra = item.reasons.slice(1, 3);
@@ -262,7 +267,7 @@ const FailureCard: React.FC<FailureCardProps> = ({ item, index, onImageClick, on
             <Chip label={`📦 ${item.lastFailure.almaVersion}`} size="small" variant="outlined" sx={{ fontSize: 11, color: "text.secondary", borderColor: "divider", flexShrink: 0 }} />
           )}
           <Box component="span" sx={{ bgcolor: color, color: "#fff", borderRadius: 20, px: 1.5, py: "3px", fontSize: 12, fontWeight: 700, flexShrink: 0, whiteSpace: "nowrap", lineHeight: 1.6 }}>
-            Failed {item.failCount} {item.failCount === 1 ? "time" : "times"} in {WINDOW_DAYS} days
+            Failed {item.failCount} {item.failCount === 1 ? "time" : "times"} in {windowDaysOverride ?? WINDOW_DAYS} days
           </Box>
         </Box>
 

@@ -15,6 +15,7 @@ export type LatestFailedTestItem = {
   buildNumber: number | null;
   duration: number | null;
   endingTimeUnix: number | null;
+  failCount: number;
 };
 
 export type LatestFailedByServer = {
@@ -31,7 +32,19 @@ export type LatestFailedTestsResponse = {
 
 function buildSQL(serverFilter: string): string {
   return `
-WITH latest_run AS (
+WITH counts AS (
+  SELECT
+    TESTNAME,
+    COUNT(*) AS FAIL_COUNT
+  FROM QA_AUTOMATION.TESTRESULTS
+  WHERE UPPER(AREA) = :area
+    AND LOWER(PASSED) = 'false'
+    AND NVL(FAILURETEXT, '') NOT LIKE '%@BeforeMethod%'
+    AND TRUNC(TESTEDON) >= TRUNC(SYSDATE) - :daysBack + 1
+    ${serverFilter}
+  GROUP BY TESTNAME
+),
+latest_run AS (
   SELECT
     TESTNAME,
     SERVER,
@@ -53,21 +66,23 @@ WITH latest_run AS (
     ${serverFilter}
 )
 SELECT
-  TESTNAME,
-  SERVER,
-  ALMAVERSION,
-  BUILDNUMBER,
-  LOGLINK,
-  SCREENSHOTLINK,
-  FAILURETEXT,
-  TESTEDON,
-  ENDINGTIMEUNIX,
-  TOTALRUNTIME
-FROM latest_run
-WHERE RN = 1
-  AND LOWER(PASSED) = 'false'
-  AND NVL(FAILURETEXT, '') NOT LIKE '%@BeforeMethod%'
-ORDER BY SERVER ASC NULLS LAST, TESTNAME ASC
+  lr.TESTNAME,
+  lr.SERVER,
+  lr.ALMAVERSION,
+  lr.BUILDNUMBER,
+  lr.LOGLINK,
+  lr.SCREENSHOTLINK,
+  lr.FAILURETEXT,
+  lr.TESTEDON,
+  lr.ENDINGTIMEUNIX,
+  lr.TOTALRUNTIME,
+  NVL(c.FAIL_COUNT, 1) AS FAIL_COUNT
+FROM latest_run lr
+LEFT JOIN counts c ON c.TESTNAME = lr.TESTNAME
+WHERE lr.RN = 1
+  AND LOWER(lr.PASSED) = 'false'
+  AND NVL(lr.FAILURETEXT, '') NOT LIKE '%@BeforeMethod%'
+ORDER BY lr.SERVER ASC NULLS LAST, lr.TESTNAME ASC
 `;
 }
 
@@ -89,16 +104,16 @@ function toNumber(x: unknown): number | null {
 
 export async function getAreaLatestFailed(
   areaName: string,
-  env: EnvFilter = "qa"
+  env: EnvFilter = "qa",
+  daysBack: number = 10
 ): Promise<LatestFailedTestsResponse> {
   const area = areaName.toUpperCase();
   const serverFilter = buildServerFilter(env);
   const sql = buildSQL(serverFilter);
 
-  const res = await execute(sql, { area });
+  const res = await execute(sql, { area, daysBack });
   const rows = (res.rows ?? []) as any[];
 
-  // Group by server — pure array grouping, no filtering logic
   const serverMap = new Map<string, LatestFailedTestItem[]>();
 
   for (const r of rows) {
@@ -114,11 +129,10 @@ export async function getAreaLatestFailed(
       buildNumber: toNumber(r.BUILDNUMBER),
       duration: toNumber(r.TOTALRUNTIME),
       endingTimeUnix: toNumber(r.ENDINGTIMEUNIX),
+      failCount: Number(r.FAIL_COUNT ?? 1),
     };
 
-    if (!serverMap.has(server)) {
-      serverMap.set(server, []);
-    }
+    if (!serverMap.has(server)) serverMap.set(server, []);
     serverMap.get(server)!.push(item);
   }
 
@@ -126,10 +140,5 @@ export async function getAreaLatestFailed(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([server, tests]) => ({ server, tests }));
 
-  return {
-    area,
-    env,
-    totalCount: rows.length,
-    servers,
-  };
+  return { area, env, totalCount: rows.length, servers };
 }

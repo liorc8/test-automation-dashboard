@@ -252,8 +252,8 @@ export async function getAreaRecentFailuresGrouped(
         buildNumber: toNumber(r.BUILDNUMBER),
         logLink,
         screenshotLink,
-        // TOTALRUNTIME from Oracle — exposed as `duration` for the FailureCard.
         duration: toNumber(r.TOTALRUNTIME),
+        endingTimeUnix: toNumber(r.LAST_ENDING_UNIX),
       },
     };
   });

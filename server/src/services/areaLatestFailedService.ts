@@ -14,6 +14,7 @@ export type LatestFailedTestItem = {
   almaVersion: string | null;
   buildNumber: number | null;
   duration: number | null;
+  endingTimeUnix: number | null;
 };
 
 export type LatestFailedByServer = {
@@ -112,6 +113,7 @@ export async function getAreaLatestFailed(
       almaVersion: (r.ALMAVERSION ?? null) as string | null,
       buildNumber: toNumber(r.BUILDNUMBER),
       duration: toNumber(r.TOTALRUNTIME),
+      endingTimeUnix: toNumber(r.ENDINGTIMEUNIX),
     };
 
     if (!serverMap.has(server)) {

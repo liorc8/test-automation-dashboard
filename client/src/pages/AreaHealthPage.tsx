@@ -5,6 +5,7 @@ import {
   Table, TableHead, TableBody, TableRow, TableCell,
   TableContainer, LinearProgress, Alert, Skeleton, Collapse, CircularProgress,
 } from "@mui/material";
+import { WINDOW_DAYS } from "../components/failureHelpers";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import HistoryIcon from "@mui/icons-material/History";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -104,7 +105,7 @@ const AreaHealthPage: React.FC = () => {
     if (!latestData && areaName && !latestLoading) {
       try {
         setLatestLoading(true);
-        const d = await getAreaLatestFailedTests(areaName, env);
+        const d = await getAreaLatestFailedTests(areaName, WINDOW_DAYS, env);
         setLatestData(d);
       } catch {
         setLatestData({ area: areaName ?? "", env, totalCount: 0, servers: [] });
